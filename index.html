@@ -3,27 +3,24 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>科學班讀書計畫 V5</title>
     
-    <title>科學班生產力計畫</title>
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="theme-color" content="#121212">
-    <link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100' style='background-color: %232c3e50'%3E%3Crect width='100' height='100' fill='%232c3e50'/%3E%3Ctext y='50%25' x='50%25' dominant-baseline='central' text-anchor='middle' font-size='60' %3E⚛️%3C/text%3E%3C/svg%3E">
+    <link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100' style='background-color: %232c3e50'%3E%3Crect width='100' height='100' fill='%232c3e50'/%3E%3Ctext y='50%25' x='50%25' dominant-baseline='central' text-anchor='middle' font-size='60' %3E📚%3C/text%3E%3C/svg%3E">
 
     <style>
-        /* --- 1. 核心佈局修正 (iPhone 13 適配) --- */
+        /* --- 全局設定 --- */
         body {
             font-family: "Microsoft JhengHei", -apple-system, BlinkMacSystemFont, sans-serif;
-            background-color: #0d1117; /* GitHub Dark 背景色 */
-            color: #c9d1d9;
+            background-color: #121212;
+            color: #ffffff;
             margin: 0;
-            /* 關鍵：使用 dvh 解決 iOS Safari 網址列遮擋問題 */
-            height: 100vh; 
-            height: 100dvh; 
+            height: 100vh;
             overflow: hidden;
             display: flex;
             flex-direction: column;
-            /* 避開瀏海與底部橫條 */
             padding-top: env(safe-area-inset-top);
             padding-bottom: env(safe-area-inset-bottom);
         }
@@ -32,243 +29,385 @@
 
         button {
             border: none;
-            border-radius: 8px;
+            border-radius: 12px;
             font-weight: bold;
             cursor: pointer;
-            transition: all 0.1s;
+            transition: transform 0.1s;
             -webkit-tap-highlight-color: transparent;
-            font-family: inherit;
         }
         button:active { transform: scale(0.96); }
 
-        /* --- 標題列 (固定高度) --- */
+        /* --- Header --- */
         .header-nav {
-            height: 50px;
-            padding: 0 15px;
+            padding: 15px 20px;
             display: flex;
             justify-content: space-between;
             align-items: center;
-            background: #161b22;
-            border-bottom: 1px solid #30363d;
-            flex-shrink: 0; /* 禁止壓縮 */
+            background: #1e1e1e;
+            border-bottom: 1px solid #333;
+            min-height: 50px;
         }
-        h2 { margin: 0; color: #58a6ff; font-size: 18px; }
+        h2 { margin: 0; color: #3498db; font-size: 20px; }
         .icon-btn {
-            background: #21262d;
-            font-size: 12px;
-            padding: 6px 12px;
-            color: #c9d1d9;
-            border: 1px solid #30363d;
+            background: #333;
+            color: #ddd;
+            font-size: 14px;
+            padding: 8px 12px;
+            border-radius: 8px;
         }
 
-        /* --- 主畫面容器 --- */
-        #setup-screen, #draw-screen, #stats-screen {
-            flex: 1; /* 佔滿剩餘空間 */
-            display: flex;
-            flex-direction: column;
-            overflow: hidden; /* 防止整體溢出 */
-            position: relative;
-        }
-
-        /* --- 列表區域 (可滾動) --- */
-        .list-container {
-            flex: 1; /* 自動填滿中間區域 */
-            overflow-y: auto; /* 只有這裡可以滾動 */
-            padding: 10px 15px;
-        }
-
-        /* --- 底部按鈕區 (固定高度) --- */
-        .bottom-actions {
-            padding: 15px;
-            background: #161b22; /* 底部背景，避免透明 */
-            border-top: 1px solid #30363d;
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-            flex-shrink: 0; /* 禁止壓縮 */
-        }
-
-        /* --- 科目列表樣式 --- */
-        .subject-row {
+        /* --- 設定頁面 --- */
+        #setup-screen { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+        
+        .control-bar {
+            background-color: #252525;
+            padding: 15px 20px;
+            margin: 10px 15px;
+            border-radius: 12px;
             display: flex;
             align-items: center;
-            background-color: #161b22;
-            margin-bottom: 8px;
-            padding: 8px 12px;
-            border-radius: 6px;
-            border: 1px solid #30363d;
+            justify-content: space-between;
+            border: 1px solid #333;
         }
+
+        .switch-container { position: relative; display: inline-block; width: 50px; height: 28px; }
+        .switch-container input { opacity: 0; width: 0; height: 0; }
+        .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #555; transition: .4s; border-radius: 34px; }
+        .slider:before { position: absolute; content: ""; height: 20px; width: 20px; left: 4px; bottom: 4px; background-color: white; transition: .4s; border-radius: 50%; }
+        input:checked + .slider { background-color: #e67e22; }
+        input:checked + .slider:before { transform: translateX(22px); }
+
+        /* 列表 */
+        .list-container { flex: 1; overflow-y: auto; padding: 0 15px 20px 15px; }
         
-        /* 排序按鈕 */
-        .order-btns {
-            display: flex;
-            flex-direction: column;
-            margin-right: 8px;
+        .subject-row {
+            display: flex; align-items: center; background-color: #1e1e1e;
+            margin-bottom: 10px; padding: 12px 15px; border-radius: 10px; border: 1px solid #333;
         }
-        .order-btn {
-            background: none;
-            color: #8b949e;
-            font-size: 10px;
-            padding: 0;
-            line-height: 1;
-            height: 12px;
-            margin: 2px 0;
-        }
-
-        input[type="checkbox"].sub-check {
-            transform: scale(1.3);
-            margin-right: 12px;
-            accent-color: #58a6ff; 
-        }
-
-        .subject-name { flex: 1; font-size: 16px; color: #e6edf3; }
-        
-        .custom-name-input {
-            flex: 1;
-            background: transparent;
-            border: none;
-            border-bottom: 1px dashed #30363d;
-            color: #3fb950;
-            font-size: 16px;
-            padding: 2px 0;
-            width: 100%;
-        }
-        .custom-name-input:focus { outline: none; border-bottom: 1px solid #3fb950; }
-
-        .weight-input {
-            width: 30px;
-            height: 28px;
-            text-align: center;
-            font-size: 16px;
-            background-color: #0d1117;
-            color: #c9d1d9;
-            border: 1px solid #30363d;
-            border-radius: 4px;
-            margin-left: 8px;
-        }
+        input[type="checkbox"].sub-check { transform: scale(1.5); margin-right: 15px; accent-color: #3498db; }
+        .subject-name { flex: 1; font-size: 18px; }
+        .weight-input { width: 45px; height: 35px; text-align: center; font-size: 18px; background-color: #2c3e50; color: #fff; border: 1px solid #444; border-radius: 8px; }
 
         .start-btn {
-            padding: 15px;
-            background: #238636; /* GitHub Green */
-            color: white;
-            font-size: 18px;
-            width: 100%;
+            margin: 10px 15px 20px 15px; padding: 18px;
+            background: linear-gradient(135deg, #2ecc71, #27ae60);
+            color: white; font-size: 20px; border-radius: 16px;
+            box-shadow: 0 4px 10px rgba(46, 204, 113, 0.3);
         }
 
-        /* 備份按鈕 */
-        .backup-area { display: flex; gap: 10px; }
-        .backup-btn {
-            flex: 1;
-            padding: 8px;
-            background: #21262d;
-            color: #8b949e;
-            font-size: 12px;
-            border: 1px solid #30363d;
-        }
+        /* --- 抽籤頁面 --- */
+        #draw-screen { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; position: relative; }
+        #deck-status { position: absolute; top: 30px; right: 20px; background: #e67e22; padding: 8px 15px; border-radius: 20px; font-size: 14px; font-weight: bold; color: white; }
+        #result-display { font-size: 60px; font-weight: bold; color: #e74c3c; margin-bottom: 10px; text-align: center; padding: 0 20px; }
+        #prob-display { color: #7f8c8d; font-size: 16px; margin-bottom: 50px; }
+        .action-btn { padding: 20px 80px; font-size: 24px; background: linear-gradient(135deg, #3498db, #2980b9); color: white; border-radius: 50px; margin-bottom: 20px; }
+        .action-btn:disabled { background: #555; color: #888; }
+        .back-btn { background: transparent; color: #7f8c8d; font-size: 14px; padding: 10px 20px; }
 
-        /* --- 抽籤與番茄鐘頁面 --- */
-        #draw-screen {
-            justify-content: center;
-            align-items: center;
-            background: radial-gradient(circle at center, #1f242d 0%, #0d1117 100%);
-        }
-
-        #result-area { text-align: center; margin-bottom: 30px; }
-        #result-display {
-            font-size: 50px;
-            font-weight: bold;
-            color: #58a6ff;
-            margin: 10px 0;
-            text-shadow: 0 0 20px rgba(88, 166, 255, 0.4);
-        }
+        /* --- 統計頁面 --- */
+        #stats-screen { flex: 1; display: flex; flex-direction: column; background: #121212; }
+        .chart-wrapper { flex: 1; display: flex; flex-direction: column; justify-content: flex-end; padding: 20px; padding-bottom: 40px; }
+        .chart-container { display: flex; align-items: flex-end; justify-content: space-around; height: 300px; border-bottom: 2px solid #555; padding-bottom: 5px; }
+        .bar-col { flex: 1; display: flex; flex-direction: column; align-items: center; margin: 0 2px; max-width: 40px; }
+        .bar-val { font-size: 10px; color: #aaa; margin-bottom: 4px; }
+        .bar { width: 100%; background: #3498db; border-radius: 4px 4px 0 0; min-height: 2px; transition: height 0.5s; }
+        .bar.highlight { background: #e74c3c; }
+        .bar-label { margin-top: 8px; font-size: 12px; color: #ccc; writing-mode: vertical-rl; text-orientation: mixed; max-height: 80px; }
         
-        /* 番茄鐘樣式 */
-        .timer-container {
-            text-align: center;
-            padding: 20px;
-            background: #161b22;
-            border-radius: 16px;
-            border: 1px solid #30363d;
-            margin-bottom: 30px;
-            width: 80%;
-        }
-        #timer-display {
-            font-size: 60px;
-            font-family: monospace;
-            color: #e6edf3;
-            font-weight: bold;
-        }
-        .timer-controls {
-            display: flex;
-            gap: 10px;
-            justify-content: center;
-            margin-top: 15px;
-        }
-        .timer-btn {
-            padding: 10px 20px;
-            font-size: 16px;
-            background: #21262d;
-            color: #c9d1d9;
-            border: 1px solid #30363d;
-        }
-        .timer-btn.active { background: #d29922; color: #fff; border:none; }
-
-        .action-btn {
-            padding: 15px 60px;
-            font-size: 20px;
-            background: #1f6feb;
-            color: white;
-            border-radius: 50px;
-            box-shadow: 0 0 15px rgba(31, 111, 235, 0.3);
-            margin-bottom: 20px;
-        }
-        .back-btn { background: transparent; color: #8b949e; font-size: 14px; margin-top: 10px; }
-
-        /* --- 統計頁面 (熱力圖) --- */
-        .heatmap-container {
-            padding: 20px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-        }
-        .heatmap-grid {
-            display: grid;
-            grid-template-columns: repeat(7, 1fr); /* 7天一列 */
-            gap: 4px;
-            margin-bottom: 10px;
-        }
-        .day-sq {
-            width: 15px;
-            height: 15px;
-            border-radius: 2px;
-            background-color: #161b22;
-            border: 1px solid #30363d;
-        }
-        /* GitHub 貢獻度顏色 */
-        .l0 { background-color: #161b22; }
-        .l1 { background-color: #0e4429; }
-        .l2 { background-color: #006d32; }
-        .l3 { background-color: #26a641; }
-        .l4 { background-color: #39d353; }
-        
-        .chart-scroll {
-            flex: 1;
-            width: 100%;
-            overflow-x: auto;
-            padding-bottom: 20px;
-        }
+        /* --- 錯誤訊息 --- */
+        #error-log { position: fixed; top: 0; left: 0; width: 100%; background: rgba(200, 0, 0, 0.9); color: white; padding: 20px; font-size: 12px; z-index: 9999; display: none; }
     </style>
 </head>
 <body>
 
+    <div id="error-log"></div>
+
     <div id="setup-screen">
         <div class="header-nav">
-            <h2>讀書計畫 V7</h2>
+            <h2>讀書計畫 V5</h2>
             <button class="icon-btn" onclick="showStats()">📊 熱力圖</button>
         </div>
         
-        <div class="list-container" id="subject-list"></div>
+        <div class="control-bar">
+            <div>
+                <div style="font-weight:bold; color:#ddd">不重複模式</div>
+                <div style="font-size:12px; color:#aaa;">讀完一科少一科</div>
+            </div>
+            <label class="switch-container">
+                <input type="checkbox" id="deck-mode-toggle">
+                <span class="slider"></span>
+            </label>
+        </div>
         
-        <div class="bottom-actions">
-            <div style="display:flex; justify-content:space-between; align-items:center; padding:0 5px;">
-                <span style="font-size:12px;
+        <div class="list-container" id="subject-list">
+            </div>
+        <button class="start-btn" onclick="startSession()">開始執行</button>
+    </div>
+
+    <div id="draw-screen" class="hidden">
+        <div id="deck-status" class="hidden"></div>
+        <div id="result-display">?</div>
+        <div id="prob-display">準備就緒</div>
+        <button id="draw-btn" class="action-btn" onclick="draw()">抽選</button>
+        <button class="back-btn" onclick="goBack()">← 返回設定</button>
+    </div>
+
+    <div id="stats-screen" class="hidden">
+        <div class="header-nav">
+            <h2>近7日統計</h2>
+            <button class="icon-btn" onclick="closeStats()">✕ 關閉</button>
+        </div>
+        <div class="chart-wrapper">
+            <div id="chart-area" class="chart-container"></div>
+            <div style="text-align:center; margin-top:10px; font-size:12px; color:#666;">數據保存在本機</div>
+        </div>
+        <div style="text-align:center; padding:20px;">
+            <button onclick="clearHistory()" style="color:#e74c3c; background:none; border:1px solid #e74c3c; padding:8px 20px; border-radius:20px;">清除紀錄</button>
+        </div>
+    </div>
+
+    <script>
+        // --- 全局錯誤攔截 (防止黑屏) ---
+        window.onerror = function(msg, url, line) {
+            const errDiv = document.getElementById('error-log');
+            errDiv.style.display = 'block';
+            errDiv.innerHTML += `錯誤: ${msg} (Line ${line})<br>請截圖並回報。`;
+            return false;
+        };
+
+        // --- 資料設定 ---
+        const defaultSubjects = [
+            { name: "數學", weight: 5 }, { name: "物理", weight: 5 },
+            { name: "化學", weight: 4 }, { name: "生物", weight: 3 },
+            { name: "英文", weight: 3 }, { name: "國文", weight: 2 },
+            { name: "地科", weight: 2 }, { name: "程式", weight: 4 },
+            { name: "專題", weight: 3 }
+        ];
+
+        let activePool = [];
+        let currentDeck = [];
+        let isDeckMode = false;
+
+        // --- 初始化 ---
+        window.addEventListener('load', () => {
+            // 嘗試讀取，如果失敗就重置
+            try {
+                loadSettings();
+            } catch (e) {
+                console.error("存檔損毀，重置中...", e);
+                localStorage.removeItem('studyApp_data'); // 強制清除壞掉的資料
+            }
+            // 確保一定執行渲染
+            renderSetupList();
+        });
+
+        // --- 核心功能 ---
+        function renderSetupList() {
+            const container = document.getElementById('subject-list');
+            if (!container) return; // 防呆
+            container.innerHTML = '';
+            
+            defaultSubjects.forEach((sub, index) => {
+                const row = document.createElement('div');
+                row.className = 'subject-row';
+                const isChecked = sub.checked !== false;
+                row.innerHTML = `
+                    <input type="checkbox" class="sub-check" id="chk-${index}" ${isChecked ? 'checked' : ''}>
+                    <label for="chk-${index}" class="subject-name">${sub.name}</label>
+                    <input type="number" id="w-${index}" class="weight-input" 
+                           value="${sub.weight}" min="1" max="9" inputmode="numeric">
+                `;
+                container.appendChild(row);
+            });
+            
+            // 讀取模式開關
+            try {
+                const storedMode = localStorage.getItem('studyApp_deckMode');
+                if(storedMode === 'true') {
+                    const toggle = document.getElementById('deck-mode-toggle');
+                    if(toggle) toggle.checked = true;
+                }
+            } catch(e) {}
+        }
+
+        function startSession() {
+            try {
+                activePool = [];
+                const checkboxes = document.querySelectorAll('#subject-list .sub-check');
+                checkboxes.forEach((chk, index) => {
+                    const weightInput = document.getElementById(`w-${index}`);
+                    let val = parseInt(weightInput.value) || 1;
+                    if (val > 9) val = 9; if (val < 1) val = 1;
+
+                    defaultSubjects[index].checked = chk.checked;
+                    defaultSubjects[index].weight = val;
+
+                    if (chk.checked) activePool.push({ name: defaultSubjects[index].name, weight: val });
+                });
+
+                if (activePool.length < 1) { alert("請至少勾選 1 個科目！"); return; }
+
+                saveSettings(); // 儲存
+
+                const toggle = document.getElementById('deck-mode-toggle');
+                isDeckMode = toggle ? toggle.checked : false;
+
+                if (isDeckMode) {
+                    currentDeck = JSON.parse(JSON.stringify(activePool));
+                    document.getElementById('deck-status').classList.remove('hidden');
+                    updateDeckStatus();
+                } else {
+                    document.getElementById('deck-status').classList.add('hidden');
+                }
+
+                switchScreen('draw-screen');
+                resetDrawScreen();
+            } catch (err) {
+                alert("啟動失敗: " + err.message);
+            }
+        }
+
+        function draw() {
+            let pool = isDeckMode ? currentDeck : activePool;
+            if (pool.length === 0) { alert("所有科目都讀完了！"); return; }
+
+            const totalWeight = pool.reduce((sum, item) => sum + item.weight, 0);
+            let randomNum = Math.random() * totalWeight;
+            let selectedIndex = -1, selectedItem = null;
+
+            for (let i = 0; i < pool.length; i++) {
+                randomNum -= pool[i].weight;
+                if (randomNum < 0) { selectedItem = pool[i]; selectedIndex = i; break; }
+            }
+
+            if(selectedItem) {
+                showResult(selectedItem, totalWeight);
+                recordHistory(selectedItem.name);
+            }
+
+            if (isDeckMode) {
+                currentDeck.splice(selectedIndex, 1);
+                updateDeckStatus();
+                if (currentDeck.length === 0) {
+                    const btn = document.getElementById('draw-btn');
+                    btn.innerText = "全部完成";
+                    btn.disabled = true;
+                    document.getElementById('prob-display').innerText = "本輪結束";
+                }
+            }
+        }
+
+        function showResult(item, totalW) {
+            const resDisplay = document.getElementById('result-display');
+            resDisplay.innerText = item.name;
+            const isScience = ['數學', '物理', '化學', '程式'].includes(item.name);
+            resDisplay.style.color = isScience ? "#e74c3c" : "#3498db";
+
+            if (!isDeckMode) {
+                const prob = ((item.weight / totalW) * 100).toFixed(1);
+                document.getElementById('prob-display').innerText = `機率: ${prob}%`;
+            } else {
+                document.getElementById('prob-display').innerText = "已選定";
+            }
+        }
+
+        // --- 歷史紀錄與統計 ---
+        function recordHistory(subjectName) {
+            try {
+                let history = JSON.parse(localStorage.getItem('study_history') || '[]');
+                history.push({ sub: subjectName, time: Date.now() });
+                const sevenDaysAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
+                history = history.filter(h => h.time > sevenDaysAgo);
+                localStorage.setItem('study_history', JSON.stringify(history));
+            } catch(e) {}
+        }
+
+        function showStats() {
+            switchScreen('stats-screen');
+            renderChart();
+        }
+
+        function renderChart() {
+            const chartArea = document.getElementById('chart-area');
+            chartArea.innerHTML = '';
+            let history = [];
+            try { history = JSON.parse(localStorage.getItem('study_history') || '[]'); } catch(e){}
+
+            if (history.length === 0) {
+                chartArea.innerHTML = '<div style="color:#555; align-self:center; width:100%; text-align:center;">暫無數據</div>';
+                return;
+            }
+
+            const counts = {};
+            history.forEach(h => { counts[h.sub] = (counts[h.sub] || 0) + 1; });
+            const maxCount = Math.max(...Object.values(counts));
+            const subjectsToShow = Object.keys(counts);
+
+            subjectsToShow.forEach(sub => {
+                const count = counts[sub];
+                const heightPercent = (count / maxCount) * 100;
+                const isScience = ['數學', '物理', '化學', '程式'].includes(sub);
+                
+                const col = document.createElement('div');
+                col.className = 'bar-col';
+                col.innerHTML = `
+                    <div class="bar-val">${count}</div>
+                    <div class="bar ${isScience ? 'highlight' : ''}" style="height: ${heightPercent}%"></div>
+                    <div class="bar-label">${sub}</div>
+                `;
+                chartArea.appendChild(col);
+            });
+        }
+
+        function clearHistory() {
+            if(confirm("確定要清除統計紀錄嗎？")) {
+                localStorage.removeItem('study_history');
+                renderChart();
+            }
+        }
+
+        // --- 輔助 ---
+        function switchScreen(screenId) {
+            ['setup-screen', 'draw-screen', 'stats-screen'].forEach(id => {
+                const el = document.getElementById(id);
+                if(el) el.classList.toggle('hidden', id !== screenId);
+            });
+        }
+        function closeStats() { switchScreen('setup-screen'); }
+        function goBack() { switchScreen('setup-screen'); }
+        function updateDeckStatus() { document.getElementById('deck-status').innerText = `剩餘: ${currentDeck.length}`; }
+        function resetDrawScreen() {
+            document.getElementById('result-display').innerText = "準備";
+            document.getElementById('result-display').style.color = "#fff";
+            document.getElementById('prob-display').innerText = "點擊開始";
+            const btn = document.getElementById('draw-btn');
+            btn.disabled = false;
+            btn.innerText = "抽選";
+        }
+
+        // --- 存檔保護機制 ---
+        function saveSettings() {
+            try {
+                const toggle = document.getElementById('deck-mode-toggle');
+                const data = { subjects: defaultSubjects, deckMode: toggle ? toggle.checked : false };
+                localStorage.setItem('studyApp_data', JSON.stringify(data.subjects));
+                localStorage.setItem('studyApp_deckMode', data.deckMode);
+            } catch(e) { console.warn("存檔失敗 (可能是隱私模式)"); }
+        }
+
+        function loadSettings() {
+            const saved = localStorage.getItem('studyApp_data');
+            if (saved) {
+                const parsed = JSON.parse(saved);
+                // 簡易合併邏輯，防止結構不合崩潰
+                parsed.forEach((s, i) => { 
+                    if(defaultSubjects[i]) { 
+                        defaultSubjects[i].weight = s.weight || defaultSubjects[i].weight; 
+                        defaultSubjects[i].checked = (s.checked !== undefined) ? s.checked : true;
+                    }
+                });
+            }
+        }
+    </script>
+</body>
+</html>
