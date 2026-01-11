@@ -464,3 +464,230 @@
             dotElement.style.backgroundColor = nextColor;
             saveSettings();
         }
+
+        function updateName(index, newName) { defaultSubjects[index].name = newName; saveSettings(); }
+        function moveItem(index, direction) {
+            playTone(800, 0.05, 'triangle');
+            const newIndex = index + direction;
+            if (newIndex < 0 || newIndex >= defaultSubjects.length) return;
+            saveCurrentUIValues();
+            [defaultSubjects[index], defaultSubjects[newIndex]] = [defaultSubjects[newIndex], defaultSubjects[index]];
+            renderSetupList();
+            saveSettings();
+        }
+
+        function saveCurrentUIValues() {
+            const checkboxes = document.querySelectorAll('#subject-list .sub-check');
+            checkboxes.forEach((chk, index) => {
+                const weightInput = document.getElementById(`w-${index}`);
+                const nameInput = document.getElementById(`name-${index}`);
+                let val = parseInt(weightInput.value) || 1;
+                defaultSubjects[index].checked = chk.checked;
+                defaultSubjects[index].weight = val;
+                defaultSubjects[index].name = nameInput.value;
+            });
+        }
+
+        function startSession() {
+            playTone(1000, 0.1, 'sine');
+            try {
+                saveCurrentUIValues();
+                activePool = defaultSubjects.filter(s => s.checked).map(s => ({
+                    name: s.name, weight: s.weight, color: s.color || '#3498db'
+                }));
+                if (activePool.length < 1) { alert("請至少勾選 1 個科目！"); return; }
+                saveSettings();
+                const toggle = document.getElementById('deck-mode-toggle');
+                isDeckMode = toggle ? toggle.checked : false;
+                if (isDeckMode) {
+                    currentDeck = JSON.parse(JSON.stringify(activePool));
+                    document.getElementById('deck-status').classList.remove('hidden');
+                    updateDeckStatus();
+                } else {
+                    document.getElementById('deck-status').classList.add('hidden');
+                }
+                switchScreen('draw-screen');
+                resetDrawScreen();
+            } catch (err) { alert("啟動失敗: " + err.message); }
+        }
+
+        function draw() {
+            if (navigator.vibrate) navigator.vibrate(30); 
+            let pool = isDeckMode ? currentDeck : activePool;
+            if (pool.length === 0) { alert("所有科目都讀完了！"); return; }
+            const resultDisplay = document.getElementById('result-display');
+            document.getElementById('draw-btn-container').classList.add('hidden');
+
+            let counter = 0;
+            let shuffle = setInterval(() => {
+                const tempItem = pool[Math.floor(Math.random() * pool.length)];
+                resultDisplay.innerText = tempItem.name;
+                resultDisplay.style.color = tempItem.color;
+                playTone(200 + counter*50, 0.03, 'square');
+                counter++;
+                if(counter > 10) { clearInterval(shuffle); finalizeDraw(pool); }
+            }, 50);
+        }
+
+        function finalizeDraw(pool) {
+            const totalWeight = pool.reduce((sum, item) => sum + item.weight, 0);
+            let randomNum = Math.random() * totalWeight;
+            let selectedIndex = -1, selectedItem = null;
+            for (let i = 0; i < pool.length; i++) {
+                randomNum -= pool[i].weight;
+                if (randomNum < 0) { selectedItem = pool[i]; selectedIndex = i; break; }
+            }
+            if(selectedItem) {
+                currentSubject = selectedItem;
+                showResult(selectedItem);
+                triggerCelebration(selectedItem.color);
+                playCheer(); // 這裡加回來了！
+            }
+            if (isDeckMode) {
+                currentDeck.splice(selectedIndex, 1);
+                updateDeckStatus();
+            }
+        }
+
+        function showResult(item) {
+            const resDisplay = document.getElementById('result-display');
+            resDisplay.innerText = item.name;
+            resDisplay.style.color = item.color;
+            resetTimer(); 
+            document.getElementById('timer-box').classList.remove('hidden');
+        }
+
+        function recordHistory(subjectName, durationMin) {
+            try {
+                let history = JSON.parse(localStorage.getItem('study_history') || '[]');
+                history.push({ sub: subjectName, time: Date.now(), duration: durationMin || 0 });
+                const daysLimit = Date.now() - 30 * 24 * 60 * 60 * 1000;
+                history = history.filter(h => h.time > daysLimit);
+                localStorage.setItem('study_history', JSON.stringify(history));
+            } catch(e) {}
+        }
+
+        function showStats() {
+            playTone(800, 0.05, 'triangle');
+            switchScreen('stats-screen');
+            renderHeatmap();
+        }
+
+        // --- V9.3 真・多彩熱力圖 ---
+        function renderHeatmap() {
+            const grid = document.getElementById('heatmap-grid');
+            const headerRow = document.getElementById('date-headers');
+            grid.innerHTML = ''; headerRow.innerHTML = '';
+            
+            let history = [];
+            try { history = JSON.parse(localStorage.getItem('study_history') || '[]'); } catch(e){}
+            
+            // 建立日期表
+            const dates = [];
+            for(let i=6; i>=0; i--) {
+                const d = new Date(); d.setDate(d.getDate() - i);
+                const dateStr = `${d.getMonth()+1}/${d.getDate()}`;
+                dates.push({ str: dateStr, obj: d });
+                const th = document.createElement('div'); th.innerText = dateStr; headerRow.appendChild(th);
+            }
+            
+            // 建立科目表與顏色對照
+            const activeSubNames = defaultSubjects.map(s => ({ name: s.name, color: s.color || '#3498db' }));
+            const dataMap = {};
+            activeSubNames.forEach(s => { dataMap[s.name] = [0, 0, 0, 0, 0, 0, 0]; });
+            
+            // 填入數據
+            history.forEach(h => {
+                const hDate = new Date(h.time);
+                const idx = dates.findIndex(d => d.obj.getDate() === hDate.getDate() && d.obj.getMonth() === hDate.getMonth());
+                if(idx !== -1 && dataMap[h.sub]) {
+                    const dur = h.duration !== undefined ? h.duration : 25; 
+                    dataMap[h.sub][idx] += dur;
+                }
+            });
+            
+            // 渲染格子
+            activeSubNames.forEach(sub => {
+                const label = document.createElement('div'); 
+                label.className = 'hm-label-col'; 
+                label.innerText = sub.name; 
+                grid.appendChild(label);
+                
+                dataMap[sub.name].forEach(minutes => {
+                    const cell = document.createElement('div'); 
+                    cell.className = 'hm-cell';
+                    
+                    if(minutes > 0) {
+                        // 計算透明度：越多越不透明
+                        let opacity = 0.3; // 基礎可見度
+                        if(minutes >= dailyGoal * 0.3) opacity = 0.5;
+                        if(minutes >= dailyGoal * 0.6) opacity = 0.8;
+                        if(minutes >= dailyGoal) opacity = 1.0;
+                        
+                        cell.style.backgroundColor = sub.color; // 使用科目顏色
+                        cell.style.opacity = opacity;
+                        
+                        if(minutes >= dailyGoal) {
+                            cell.style.boxShadow = `0 0 8px ${sub.color}`; // 達成目標發光
+                        }
+                    } else {
+                        // 沒讀的時候保持暗色
+                        cell.style.backgroundColor = "#252525";
+                    }
+                    
+                    if(minutes > 0) cell.title = `${sub.name}: ${minutes}分鐘`;
+                    grid.appendChild(cell);
+                });
+            });
+        }
+
+        function clearHistory() { if(confirm("確定要清除統計紀錄嗎？")) { localStorage.removeItem('study_history'); renderHeatmap(); } }
+        function switchScreen(screenId) {
+            ['setup-screen', 'draw-screen', 'stats-screen'].forEach(id => {
+                const el = document.getElementById(id); if(el) el.classList.toggle('hidden', id !== screenId);
+            });
+        }
+        function closeStats() { playTone(800, 0.05, 'triangle'); switchScreen('setup-screen'); }
+        function goBack() { 
+            stopConfetti(); 
+            resetTimer(); 
+            playTone(800, 0.05, 'triangle'); switchScreen('setup-screen'); 
+        }
+        function updateDeckStatus() { document.getElementById('deck-status').innerText = `剩餘: ${currentDeck.length}`; }
+        function resetDrawScreen() {
+            document.getElementById('result-display').innerText = "?";
+            document.getElementById('result-display').style.color = "#3498db";
+            
+            const drawBtnContainer = document.getElementById('draw-btn-container');
+            if(drawBtnContainer) drawBtnContainer.classList.remove('hidden');
+            
+            document.getElementById('timer-box').classList.add('hidden');
+            resetTimer();
+        }
+        function saveSettings() {
+            try {
+                const toggle = document.getElementById('deck-mode-toggle');
+                const data = { subjects: defaultSubjects, deckMode: toggle ? toggle.checked : false };
+                localStorage.setItem('studyApp_data', JSON.stringify(data.subjects));
+                localStorage.setItem('studyApp_deckMode', data.deckMode);
+            } catch(e) {}
+        }
+        function loadSettings() {
+            const saved = localStorage.getItem('studyApp_data');
+            if (saved) {
+                const parsed = JSON.parse(saved);
+                if(Array.isArray(parsed) && parsed.length > 0) {
+                    parsed.forEach((p, i) => {
+                        if(defaultSubjects[i]) {
+                            defaultSubjects[i].weight = p.weight;
+                            defaultSubjects[i].name = p.name;
+                            defaultSubjects[i].checked = p.checked;
+                            defaultSubjects[i].color = p.color || defaultSubjects[i].color;
+                        }
+                    });
+                }
+            }
+        }
+    </script>
+</body>
+</html>
