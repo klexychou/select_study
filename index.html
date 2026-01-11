@@ -211,3 +211,385 @@
         .lvl-0 { background-color: #252525; }
         .lvl-1 { background-color: #0e4429; }
         .lvl-2 { background-color: #006d32; }
+        .lvl-3 { background-color: #26a641; }
+        .lvl-4 { background-color: #39d353; box-shadow: 0 0 5px #39d353; }
+
+    </style>
+</head>
+<body>
+
+    <canvas id="confetti-canvas"></canvas>
+
+    <div id="setup-screen">
+        <div class="header-nav">
+            <button id="sound-btn" class="icon-btn active" onclick="toggleSound()">🔊</button>
+            <h2>讀書計畫 V7.3</h2>
+            <button class="icon-btn" onclick="showStats()">🔥 熱力圖</button>
+        </div>
+        
+        <div class="controls-wrapper">
+            <div class="control-bar">
+                <div class="control-row">
+                    <div>
+                        <div style="font-weight:bold; color:#ddd; font-size:14px;">不重複模式</div>
+                        <div style="font-size:10px; color:#aaa;">讀完一科少一科</div>
+                    </div>
+                    <label class="switch-container">
+                        <input type="checkbox" id="deck-mode-toggle" onchange="playTone(800, 0.05, 'triangle')">
+                        <span class="slider"></span>
+                    </label>
+                </div>
+            </div>
+        </div>
+        
+        <div class="list-container" id="subject-list">
+            </div>
+
+        <div class="bottom-action-area">
+            <button class="font-btn" onclick="adjustFontSize(-1)" style="font-weight: 300; font-size: 14px;">A</button>
+            
+            <button class="start-btn" onclick="startSession()">🚀 開始執行</button>
+            
+            <button class="font-btn" onclick="adjustFontSize(1)" style="font-weight: 900; font-size: 20px;">A</button>
+        </div>
+    </div>
+
+    <div id="draw-screen" class="hidden">
+        <div id="deck-status" class="hidden"></div>
+        <div id="result-display">?</div>
+        <div id="prob-display">準備就緒</div>
+        <button id="draw-btn" class="action-btn" onclick="draw()">抽選</button>
+        <button class="back-btn" onclick="goBack()">← 返回設定</button>
+    </div>
+
+    <div id="stats-screen" class="hidden">
+        <div class="header-nav">
+            <h2>讀書熱力圖</h2>
+            <button class="icon-btn" onclick="closeStats()">✕</button>
+        </div>
+        <div style="display:grid; grid-template-columns: auto repeat(7, 1fr); gap:4px; padding:10px 20px 0 20px; font-size:10px; color:#666; text-align:center;">
+            <div style="width:80px;"></div>
+            <div id="date-headers" style="display:contents;"></div>
+        </div>
+        <div class="heatmap-container">
+            <div id="heatmap-grid" class="heatmap-grid"></div>
+        </div>
+        <div style="text-align:center; padding:20px;">
+            <button onclick="clearHistory()" style="color:#e74c3c; background:none; border:1px solid #e74c3c; padding:8px 20px; border-radius:20px;">清除紀錄</button>
+        </div>
+    </div>
+
+    <script>
+        // --- JS 功能區 ---
+        
+        // 字體調整邏輯 (修改為增減模式)
+        let currentFontSize = 16;
+        function adjustFontSize(delta) {
+            playTone(800, 0.05, 'triangle');
+            currentFontSize += delta;
+            
+            // 限制範圍 (例如 12px ~ 24px)
+            if (currentFontSize < 12) currentFontSize = 12;
+            if (currentFontSize > 24) currentFontSize = 24;
+
+            document.documentElement.style.setProperty('--list-font-size', currentFontSize + 'px');
+            localStorage.setItem('studyApp_fontSize', currentFontSize);
+        }
+
+        // --- 1. 彩帶特效 ---
+        const canvas = document.getElementById('confetti-canvas');
+        const ctx = canvas.getContext('2d');
+        let particles = []; let animationId = null;
+        function resizeCanvas() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
+        window.addEventListener('resize', resizeCanvas); resizeCanvas();
+
+        function createParticle() {
+            const colors = ['#e74c3c', '#3498db', '#f1c40f', '#2ecc71', '#9b59b6'];
+            return {
+                x: Math.random() * canvas.width, y: Math.random() * canvas.height - canvas.height, 
+                size: Math.random() * 8 + 4, color: colors[Math.floor(Math.random() * colors.length)],
+                speedY: Math.random() * 3 + 2, speedX: Math.random() * 2 - 1,
+                rotation: Math.random() * 360, rotationSpeed: Math.random() * 4 - 2
+            };
+        }
+        function startConfetti() { particles = []; for (let i = 0; i < 150; i++) particles.push(createParticle()); if (!animationId) loopConfetti(); }
+        function stopConfetti() { if (animationId) { cancelAnimationFrame(animationId); animationId = null; } ctx.clearRect(0, 0, canvas.width, canvas.height); }
+        function loopConfetti() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            particles.forEach((p, index) => {
+                p.y += p.speedY; p.x += p.speedX; p.rotation += p.rotationSpeed;
+                ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.rotation * Math.PI / 180);
+                ctx.fillStyle = p.color; ctx.fillRect(-p.size/2, -p.size/2, p.size, p.size); ctx.restore();
+                if (p.y > canvas.height) particles[index] = createParticle();
+            });
+            animationId = requestAnimationFrame(loopConfetti);
+        }
+        function triggerCelebration() { startConfetti(); setTimeout(stopConfetti, 3000); }
+
+        // --- 2. 音效 ---
+        let audioCtx = null; let isMuted = false;
+        function initAudio() { if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)(); }
+        function playTone(freq, duration, type = 'sine') {
+            if (isMuted || !audioCtx) return;
+            try {
+                const osc = audioCtx.createOscillator(); const gain = audioCtx.createGain();
+                osc.type = type; osc.frequency.value = freq;
+                osc.connect(gain); gain.connect(audioCtx.destination);
+                osc.start(); gain.gain.exponentialRampToValueAtTime(0.00001, audioCtx.currentTime + duration);
+                osc.stop(audioCtx.currentTime + duration);
+            } catch(e) {}
+        }
+        function playApplause() {
+            if (isMuted || !audioCtx) return;
+            const duration = 2.0; const bufferSize = audioCtx.sampleRate * duration;
+            const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+            const data = buffer.getChannelData(0);
+            for (let i = 0; i < bufferSize; i++) data[i] = (Math.random() * 2 - 1) * Math.exp(-i / (audioCtx.sampleRate * 0.5));
+            const noise = audioCtx.createBufferSource(); noise.buffer = buffer;
+            const gain = audioCtx.createGain(); const filter = audioCtx.createBiquadFilter();
+            filter.type = 'lowpass'; filter.frequency.value = 1000;
+            noise.connect(filter); filter.connect(gain); gain.connect(audioCtx.destination);
+            gain.gain.setValueAtTime(0.5, audioCtx.currentTime); gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
+            noise.start();
+        }
+        function playCheer() {
+            initAudio(); playTone(523.25, 0.2, 'triangle'); setTimeout(() => playTone(659.25, 0.2, 'triangle'), 150);
+            setTimeout(() => playTone(783.99, 0.4, 'square'), 300); setTimeout(playApplause, 300);
+        }
+        function toggleSound() {
+            isMuted = !isMuted;
+            document.getElementById('sound-btn').innerHTML = isMuted ? '🔇' : '🔊';
+            document.getElementById('sound-btn').classList.toggle('active', !isMuted);
+            if(!isMuted) playTone(800, 0.05, 'triangle');
+        }
+
+        // --- 3. 核心邏輯 ---
+        let defaultSubjects = [
+            { name: "數學", weight: 5 }, { name: "物理", weight: 5 },
+            { name: "化學", weight: 4 }, { name: "生物", weight: 3 },
+            { name: "英文", weight: 3 }, { name: "國文", weight: 2 },
+            { name: "地科", weight: 2 }, { name: "程式", weight: 4 },
+            { name: "專題", weight: 3 },
+            { name: "自訂1", weight: 1 }, { name: "自訂2", weight: 1 },
+            { name: "自訂3", weight: 1 }, { name: "自訂4", weight: 1 },
+            { name: "自訂5", weight: 1 }
+        ];
+
+        let activePool = []; let currentDeck = []; let isDeckMode = false;
+
+        window.addEventListener('load', () => {
+            document.body.addEventListener('click', () => initAudio(), { once: true });
+            try { loadSettings(); } catch (e) { localStorage.removeItem('studyApp_data'); }
+            renderSetupList();
+            
+            // 讀取並套用字體設定
+            const savedFont = localStorage.getItem('studyApp_fontSize');
+            if(savedFont) {
+                currentFontSize = parseInt(savedFont); // 更新全域變數
+                document.documentElement.style.setProperty('--list-font-size', currentFontSize + 'px');
+            }
+        });
+
+        function renderSetupList() {
+            const container = document.getElementById('subject-list');
+            if (!container) return;
+            container.innerHTML = '';
+            defaultSubjects.forEach((sub, index) => {
+                const row = document.createElement('div');
+                row.className = 'subject-row';
+                const isChecked = sub.checked !== false;
+                row.innerHTML = `
+                    <input type="checkbox" class="sub-check" id="chk-${index}" ${isChecked ? 'checked' : ''} onchange="playTone(800, 0.05, 'triangle')">
+                    <input type="text" class="name-input" value="${sub.name}" id="name-${index}" onchange="updateName(${index}, this.value)">
+                    <input type="number" id="w-${index}" class="weight-input" value="${sub.weight}" min="1" max="9" inputmode="numeric" onfocus="this.select()">
+                    <div class="order-btn-group">
+                        <button class="order-btn" onclick="moveItem(${index}, -1)">▲</button>
+                        <button class="order-btn" onclick="moveItem(${index}, 1)">▼</button>
+                    </div>
+                `;
+                container.appendChild(row);
+            });
+            try {
+                const storedMode = localStorage.getItem('studyApp_deckMode');
+                if(storedMode === 'true') document.getElementById('deck-mode-toggle').checked = true;
+            } catch(e) {}
+        }
+
+        function updateName(index, newName) { defaultSubjects[index].name = newName; saveSettings(); }
+        function moveItem(index, direction) {
+            playTone(800, 0.05, 'triangle');
+            const newIndex = index + direction;
+            if (newIndex < 0 || newIndex >= defaultSubjects.length) return;
+            saveCurrentUIValues();
+            [defaultSubjects[index], defaultSubjects[newIndex]] = [defaultSubjects[newIndex], defaultSubjects[index]];
+            renderSetupList();
+            saveSettings();
+        }
+
+        function saveCurrentUIValues() {
+            const checkboxes = document.querySelectorAll('#subject-list .sub-check');
+            checkboxes.forEach((chk, index) => {
+                const weightInput = document.getElementById(`w-${index}`);
+                const nameInput = document.getElementById(`name-${index}`);
+                let val = parseInt(weightInput.value) || 1;
+                defaultSubjects[index].checked = chk.checked;
+                defaultSubjects[index].weight = val;
+                defaultSubjects[index].name = nameInput.value;
+            });
+        }
+
+        function startSession() {
+            playTone(1000, 0.1, 'sine');
+            try {
+                saveCurrentUIValues();
+                activePool = defaultSubjects.filter(s => s.checked).map(s => ({name: s.name, weight: s.weight}));
+                if (activePool.length < 1) { alert("請至少勾選 1 個科目！"); return; }
+                saveSettings();
+                const toggle = document.getElementById('deck-mode-toggle');
+                isDeckMode = toggle ? toggle.checked : false;
+                if (isDeckMode) {
+                    currentDeck = JSON.parse(JSON.stringify(activePool));
+                    document.getElementById('deck-status').classList.remove('hidden');
+                    updateDeckStatus();
+                } else {
+                    document.getElementById('deck-status').classList.add('hidden');
+                }
+                switchScreen('draw-screen');
+                resetDrawScreen();
+            } catch (err) { alert("啟動失敗: " + err.message); }
+        }
+
+        function draw() {
+            if (navigator.vibrate) navigator.vibrate(30); 
+            let pool = isDeckMode ? currentDeck : activePool;
+            if (pool.length === 0) { alert("所有科目都讀完了！"); return; }
+            const resultDisplay = document.getElementById('result-display');
+            let counter = 0;
+            let shuffle = setInterval(() => {
+                resultDisplay.innerText = pool[Math.floor(Math.random() * pool.length)].name;
+                playTone(200 + counter*50, 0.03, 'square');
+                counter++;
+                if(counter > 10) { clearInterval(shuffle); finalizeDraw(pool); }
+            }, 50);
+        }
+
+        function finalizeDraw(pool) {
+            const totalWeight = pool.reduce((sum, item) => sum + item.weight, 0);
+            let randomNum = Math.random() * totalWeight;
+            let selectedIndex = -1, selectedItem = null;
+            for (let i = 0; i < pool.length; i++) {
+                randomNum -= pool[i].weight;
+                if (randomNum < 0) { selectedItem = pool[i]; selectedIndex = i; break; }
+            }
+            if(selectedItem) {
+                showResult(selectedItem, totalWeight);
+                recordHistory(selectedItem.name);
+                playCheer(); triggerCelebration();
+            }
+            if (isDeckMode) {
+                currentDeck.splice(selectedIndex, 1);
+                updateDeckStatus();
+                if (currentDeck.length === 0) {
+                    const btn = document.getElementById('draw-btn');
+                    btn.innerText = "全部完成"; btn.disabled = true;
+                    document.getElementById('prob-display').innerText = "本輪結束";
+                }
+            }
+        }
+
+        function showResult(item, totalW) {
+            const resDisplay = document.getElementById('result-display');
+            resDisplay.innerText = item.name;
+            const isScience = ['數學', '物理', '化學', '程式'].includes(item.name);
+            resDisplay.style.color = isScience ? "#e74c3c" : "#3498db";
+            if (!isDeckMode) {
+                const prob = ((item.weight / totalW) * 100).toFixed(1);
+                document.getElementById('prob-display').innerText = `機率: ${prob}%`;
+            } else {
+                document.getElementById('prob-display').innerText = "已選定";
+            }
+        }
+
+        function recordHistory(subjectName) {
+            try {
+                let history = JSON.parse(localStorage.getItem('study_history') || '[]');
+                history.push({ sub: subjectName, time: Date.now() });
+                const daysLimit = Date.now() - 30 * 24 * 60 * 60 * 1000;
+                history = history.filter(h => h.time > daysLimit);
+                localStorage.setItem('study_history', JSON.stringify(history));
+            } catch(e) {}
+        }
+
+        function showStats() {
+            playTone(800, 0.05, 'triangle');
+            switchScreen('stats-screen');
+            renderHeatmap();
+        }
+
+        function renderHeatmap() {
+            const grid = document.getElementById('heatmap-grid');
+            const headerRow = document.getElementById('date-headers');
+            grid.innerHTML = ''; headerRow.innerHTML = '';
+            let history = [];
+            try { history = JSON.parse(localStorage.getItem('study_history') || '[]'); } catch(e){}
+            const dates = [];
+            for(let i=6; i>=0; i--) {
+                const d = new Date(); d.setDate(d.getDate() - i);
+                const dateStr = `${d.getMonth()+1}/${d.getDate()}`;
+                dates.push({ str: dateStr, obj: d });
+                const th = document.createElement('div'); th.innerText = dateStr; headerRow.appendChild(th);
+            }
+            const activeSubNames = defaultSubjects.map(s => s.name);
+            const dataMap = {};
+            activeSubNames.forEach(name => { dataMap[name] = [0, 0, 0, 0, 0, 0, 0]; });
+            history.forEach(h => {
+                const hDate = new Date(h.time);
+                const idx = dates.findIndex(d => d.obj.getDate() === hDate.getDate() && d.obj.getMonth() === hDate.getMonth());
+                if(idx !== -1 && dataMap[h.sub]) dataMap[h.sub][idx]++;
+            });
+            activeSubNames.forEach(subName => {
+                const label = document.createElement('div'); label.className = 'hm-label-col'; label.innerText = subName; grid.appendChild(label);
+                dataMap[subName].forEach(count => {
+                    const cell = document.createElement('div'); cell.className = 'hm-cell';
+                    if(count > 0) cell.classList.add('lvl-1');
+                    if(count > 1) cell.classList.remove('lvl-1'), cell.classList.add('lvl-2');
+                    if(count > 3) cell.classList.remove('lvl-2'), cell.classList.add('lvl-3');
+                    if(count > 5) cell.classList.remove('lvl-3'), cell.classList.add('lvl-4');
+                    grid.appendChild(cell);
+                });
+            });
+        }
+
+        function clearHistory() { if(confirm("確定要清除統計紀錄嗎？")) { localStorage.removeItem('study_history'); renderHeatmap(); } }
+        function switchScreen(screenId) {
+            ['setup-screen', 'draw-screen', 'stats-screen'].forEach(id => {
+                const el = document.getElementById(id); if(el) el.classList.toggle('hidden', id !== screenId);
+            });
+        }
+        function closeStats() { playTone(800, 0.05, 'triangle'); switchScreen('setup-screen'); }
+        function goBack() { stopConfetti(); playTone(800, 0.05, 'triangle'); switchScreen('setup-screen'); }
+        function updateDeckStatus() { document.getElementById('deck-status').innerText = `剩餘: ${currentDeck.length}`; }
+        function resetDrawScreen() {
+            document.getElementById('result-display').innerText = "準備";
+            document.getElementById('result-display').style.color = "#fff";
+            document.getElementById('prob-display').innerText = "點擊開始";
+            const btn = document.getElementById('draw-btn'); btn.disabled = false; btn.innerText = "抽選";
+        }
+        function saveSettings() {
+            try {
+                const toggle = document.getElementById('deck-mode-toggle');
+                const data = { subjects: defaultSubjects, deckMode: toggle ? toggle.checked : false };
+                localStorage.setItem('studyApp_data', JSON.stringify(data.subjects));
+                localStorage.setItem('studyApp_deckMode', data.deckMode);
+            } catch(e) {}
+        }
+        function loadSettings() {
+            const saved = localStorage.getItem('studyApp_data');
+            if (saved) {
+                const parsed = JSON.parse(saved);
+                if(Array.isArray(parsed) && parsed.length > 0) defaultSubjects = parsed;
+            }
+        }
+    </script>
+</body>
+</html>
