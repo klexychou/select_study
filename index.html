@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>科學班讀書計畫 V7.4</title>
+    <title>科學班讀書計畫 V7.5</title>
     
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -22,13 +22,11 @@
             background-color: #121212;
             color: #ffffff;
             margin: 0;
-            /* 使用 dvh (Dynamic Viewport Height) 解決手機網址列伸縮問題 */
-            height: 100dvh; 
+            height: 100dvh; /* 使用 dvh 確保高度正確 */
             overflow: hidden;
             display: flex;
             flex-direction: column;
             padding-top: env(safe-area-inset-top);
-            /* 底部 padding 改由 bottom-action-area 處理，這裡設為 0 */
             padding-bottom: 0;
             user-select: none;
         }
@@ -109,8 +107,7 @@
             overflow-y: auto;
             padding: 0 15px;
             min-height: 0;
-            /* 增加底部緩衝，確保最後一個項目不會貼太緊 */
-            padding-bottom: 10px; 
+            padding-bottom: 20px; 
         }
         
         .subject-row {
@@ -162,24 +159,24 @@
         }
         .order-btn:active { background: #555; color: white; }
 
-        /* --- 底部按鈕區 (關鍵修正) --- */
+        /* --- 底部按鈕區 (關鍵修正 V7.5) --- */
         .bottom-action-area {
             flex-shrink: 0;
             background: #121212;
             display: flex;
-            gap: 10px;
+            gap: 12px;
             align-items: stretch;
             
-            /* 上方的內距 */
             padding-top: 10px;
-            /* 左右內距 */
             padding-left: 15px;
             padding-right: 15px;
             
-            /* 關鍵：底部的內距 = 15px + 手機安全區域 (Home Indicator) 的高度 */
-            padding-bottom: calc(15px + env(safe-area-inset-bottom));
+            /* 【強力修正】增加大量底部緩衝 (40px) 確保不被 Home Bar 遮擋 */
+            padding-bottom: calc(40px + env(safe-area-inset-bottom));
             
-            border-top: 1px solid #222; /* 增加一條不明顯的分隔線，視覺更穩定 */
+            border-top: 1px solid #222;
+            z-index: 100; /* 確保浮在最上層 */
+            position: relative;
         }
 
         /* 字體調整按鈕 */
@@ -193,12 +190,13 @@
             display: flex;
             align-items: center;
             justify-content: center;
+            border-radius: 12px; /* 統一圓角 */
         }
         .font-btn:active { background-color: #333; }
 
         .start-btn {
             flex: 1;
-            padding: 14px;
+            padding: 12px; /* 稍微減小 padding 讓按鈕不要過厚 */
             background: linear-gradient(135deg, #2ecc71, #27ae60);
             color: white; font-size: 18px; border-radius: 12px;
             box-shadow: 0 4px 10px rgba(46, 204, 113, 0.4);
@@ -235,7 +233,7 @@
     <div id="setup-screen">
         <div class="header-nav">
             <button id="sound-btn" class="icon-btn active" onclick="toggleSound()">🔊</button>
-            <h2>讀書計畫 V7.4</h2>
+            <h2>讀書計畫 V7.5</h2>
             <button class="icon-btn" onclick="showStats()">🔥 熱力圖</button>
         </div>
         
