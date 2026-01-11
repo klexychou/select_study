@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>科學班讀書計畫 V7.1</title>
+    <title>科學班讀書計畫 V7.2</title>
     
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -11,7 +11,7 @@
     <link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100' style='background-color: %232c3e50'%3E%3Crect width='100' height='100' fill='%232c3e50'/%3E%3Ctext y='50%25' x='50%25' dominant-baseline='central' text-anchor='middle' font-size='60' %3E📚%3C/text%3E%3C/svg%3E">
 
     <style>
-        /* --- 全局變數 (控制字體大小) --- */
+        /* --- 全局變數 --- */
         :root {
             --list-font-size: 16px;
         }
@@ -22,8 +22,8 @@
             background-color: #121212;
             color: #ffffff;
             margin: 0;
-            height: 100vh; /* 佔滿全螢幕 */
-            overflow: hidden; /* 禁止整個網頁滾動，只讓列表滾動 */
+            height: 100vh;
+            overflow: hidden;
             display: flex;
             flex-direction: column;
             padding-top: env(safe-area-inset-top);
@@ -51,43 +51,42 @@
 
         /* --- Header --- */
         .header-nav {
-            flex-shrink: 0; /* 禁止壓縮 */
-            padding: 10px 20px;
+            flex-shrink: 0;
+            padding: 10px 15px; /* 稍微縮小 padding */
             display: flex;
             justify-content: space-between;
             align-items: center;
             background: #1e1e1e;
             border-bottom: 1px solid #333;
-            min-height: 50px;
+            min-height: 45px; /* 縮小 Header 高度 */
             z-index: 10;
         }
         h2 { margin: 0; color: #3498db; font-size: 18px; }
         .icon-btn {
-            background: #333; color: #ddd; font-size: 16px; padding: 8px 12px; border-radius: 8px; margin-left: 8px;
+            background: #333; color: #ddd; font-size: 14px; padding: 6px 10px; border-radius: 8px; margin-left: 8px;
         }
         .icon-btn.active { background: #3498db; color: white; }
 
-        /* --- 設定頁面 (Flexbox 佈局核心) --- */
+        /* --- 設定頁面 --- */
         #setup-screen {
-            flex: 1; /* 佔滿剩餘空間 */
+            flex: 1;
             display: flex;
-            flex-direction: column; /* 上下排列 */
+            flex-direction: column;
             overflow: hidden;
         }
         
-        /* 控制區塊 (不重複模式 + 字體大小) */
         .controls-wrapper {
-            flex-shrink: 0; /* 禁止壓縮 */
-            padding: 10px 15px;
+            flex-shrink: 0;
+            padding: 8px 15px; /* 縮小間距 */
             background: #121212;
         }
 
         .control-bar {
             background-color: #252525;
-            padding: 12px 15px;
-            border-radius: 12px;
+            padding: 10px 15px;
+            border-radius: 10px;
             border: 1px solid #333;
-            margin-bottom: 10px;
+            margin-bottom: 5px;
         }
         
         .control-row {
@@ -96,124 +95,106 @@
             justify-content: space-between;
         }
         .control-row:not(:last-child) {
-            margin-bottom: 12px;
-            padding-bottom: 12px;
+            margin-bottom: 8px; /* 縮小行距 */
+            padding-bottom: 8px;
             border-bottom: 1px solid #333;
         }
 
-        .switch-container { position: relative; display: inline-block; width: 50px; height: 28px; }
+        .switch-container { position: relative; display: inline-block; width: 40px; height: 24px; /* 開關變小 */ }
         .switch-container input { opacity: 0; width: 0; height: 0; }
         .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #555; transition: .4s; border-radius: 34px; }
-        .slider:before { position: absolute; content: ""; height: 20px; width: 20px; left: 4px; bottom: 4px; background-color: white; transition: .4s; border-radius: 50%; }
+        .slider:before { position: absolute; content: ""; height: 18px; width: 18px; left: 3px; bottom: 3px; background-color: white; transition: .4s; border-radius: 50%; }
         input:checked + .slider { background-color: #e67e22; }
-        input:checked + .slider:before { transform: translateX(22px); }
+        input:checked + .slider:before { transform: translateX(16px); }
 
-        /* 字體滑桿 */
         .font-slider {
-            width: 100px;
-            height: 6px;
-            background: #444;
-            outline: none;
-            border-radius: 3px;
-            -webkit-appearance: none;
+            width: 100px; height: 4px; background: #444; outline: none; border-radius: 2px; -webkit-appearance: none;
         }
         .font-slider::-webkit-slider-thumb {
-            -webkit-appearance: none;
-            width: 18px;
-            height: 18px;
-            background: #3498db;
-            border-radius: 50%;
-            cursor: pointer;
+            -webkit-appearance: none; width: 14px; height: 14px; background: #3498db; border-radius: 50%; cursor: pointer;
         }
 
-        /* --- 列表區域 (關鍵修正) --- */
+        /* --- 列表區域 (高度瘦身重點) --- */
         .list-container {
-            flex: 1; /* 自動填滿中間剩餘高度 */
-            overflow-y: auto; /* 只有這裡可以滾動 */
+            flex: 1;
+            overflow-y: auto;
             padding: 0 15px;
-            min-height: 0; /* 防止 Flexbox 溢出 */
+            min-height: 0;
         }
         
         .subject-row {
             display: flex;
             align-items: center;
             background-color: #1e1e1e;
-            margin-bottom: 8px;
-            padding: 8px 10px; /* 稍微減少左右 padding */
-            border-radius: 10px;
+            margin-bottom: 4px;      /* 改這裡：原本 8px -> 4px */
+            padding: 4px 10px;       /* 改這裡：原本 8px -> 4px */
+            border-radius: 8px;      /* 圓角稍微變小 */
             border: 1px solid #333;
-            /* 防止寬度溢出 */
             width: 100%;
             box-sizing: border-box; 
         }
 
         input[type="checkbox"].sub-check {
-            flex-shrink: 0; /* 禁止壓縮 */
-            transform: scale(1.3);
-            margin-right: 10px;
+            flex-shrink: 0;
+            transform: scale(1.1); /* 勾選框稍微變小 */
+            margin-right: 8px;
             accent-color: #3498db;
         }
         
-        /* 可編輯的科目名稱 Input */
         .name-input {
-            flex: 1; /* 自動佔滿中間空間 */
-            width: 0; /* 關鍵！讓 flex item 可以縮小到內容以下，防止撐爆 */
+            flex: 1;
+            width: 0;
             min-width: 50px;
-            font-size: var(--list-font-size); /* 使用變數 */
+            font-size: var(--list-font-size);
             font-weight: 500;
             background: transparent;
             border: none;
             color: white;
             border-bottom: 1px solid transparent;
-            padding: 4px 0;
-            margin-right: 8px;
+            padding: 2px 0; /* 縮小 padding */
+            margin-right: 6px;
             border-radius: 0;
         }
-        .name-input:focus {
-            border-bottom: 1px solid #3498db;
-            outline: none;
-            background: #252525;
-        }
+        .name-input:focus { border-bottom: 1px solid #3498db; outline: none; background: #252525; }
 
         .weight-input {
             flex-shrink: 0;
-            width: 36px; /* 稍微縮小 */
-            height: 30px;
+            width: 32px;
+            height: 26px;     /* 改這裡：原本 30px -> 26px */
             text-align: center;
-            font-size: 16px;
+            font-size: 14px;  /* 字體微調 */
             background-color: #2c3e50;
             color: #fff;
             border: 1px solid #444;
-            border-radius: 6px;
+            border-radius: 5px;
             margin-right: 6px;
         }
 
         .order-btn-group {
-            flex-shrink: 0; /* 禁止壓縮 */
+            flex-shrink: 0;
             display: flex;
             flex-direction: column;
-            gap: 2px;
-            width: 24px; /* 固定寬度，確保不會被擠出去 */
+            gap: 1px;        /* 間距變小 */
+            width: 22px;
         }
         .order-btn {
-            background: #333; color: #aaa; border-radius: 4px; padding: 0; font-size: 10px; height: 16px; line-height: 16px; width: 100%;
+            background: #333; color: #aaa; border-radius: 3px; padding: 0; font-size: 8px; height: 12px; line-height: 12px; width: 100%;
         }
         .order-btn:active { background: #555; color: white; }
 
-        /* --- 底部按鈕區 (關鍵修正) --- */
+        /* --- 底部按鈕區 --- */
         .bottom-action-area {
-            flex-shrink: 0; /* 禁止壓縮 */
-            padding: 15px;
-            background: #121212; /* 確保不透明 */
-            border-top: 1px solid #222; /* 選用，增加層次感 */
+            flex-shrink: 0;
+            padding: 10px 15px 15px 15px; /* 縮小上方 padding */
+            background: #121212;
         }
 
         .start-btn {
             width: 100%;
-            padding: 16px;
+            padding: 14px; /* 按鈕稍微變矮 */
             background: linear-gradient(135deg, #2ecc71, #27ae60);
-            color: white; font-size: 20px; border-radius: 16px;
-            box-shadow: 0 4px 15px rgba(46, 204, 113, 0.4);
+            color: white; font-size: 18px; border-radius: 12px;
+            box-shadow: 0 4px 10px rgba(46, 204, 113, 0.4);
         }
 
         /* --- 抽籤頁面 --- */
@@ -246,7 +227,7 @@
     <div id="setup-screen">
         <div class="header-nav">
             <button id="sound-btn" class="icon-btn active" onclick="toggleSound()">🔊</button>
-            <h2>讀書計畫 V7.1</h2>
+            <h2>讀書計畫 V7.2</h2>
             <button class="icon-btn" onclick="showStats()">🔥 熱力圖</button>
         </div>
         
@@ -269,7 +250,7 @@
                     <div style="display:flex; align-items:center; gap:10px;">
                         <span style="font-size:12px; color:#aaa;">A</span>
                         <input type="range" min="12" max="24" value="16" class="font-slider" id="font-size-slider" oninput="updateFontSize(this.value)">
-                        <span style="font-size:18px; color:#aaa;">A</span>
+                        <span style="font-size:16px; color:#aaa;">A</span>
                     </div>
                 </div>
             </div>
@@ -310,8 +291,6 @@
 
     <script>
         // --- JS 功能區 ---
-        
-        // 字體調整
         function updateFontSize(val) {
             document.documentElement.style.setProperty('--list-font-size', val + 'px');
             localStorage.setItem('studyApp_fontSize', val);
@@ -320,48 +299,27 @@
         // --- 1. 彩帶特效 ---
         const canvas = document.getElementById('confetti-canvas');
         const ctx = canvas.getContext('2d');
-        let particles = [];
-        let animationId = null;
-
-        function resizeCanvas() {
-            canvas.width = window.innerWidth;
-            canvas.height = window.innerHeight;
-        }
-        window.addEventListener('resize', resizeCanvas);
-        resizeCanvas();
+        let particles = []; let animationId = null;
+        function resizeCanvas() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
+        window.addEventListener('resize', resizeCanvas); resizeCanvas();
 
         function createParticle() {
             const colors = ['#e74c3c', '#3498db', '#f1c40f', '#2ecc71', '#9b59b6'];
             return {
-                x: Math.random() * canvas.width,
-                y: Math.random() * canvas.height - canvas.height, 
-                size: Math.random() * 8 + 4,
-                color: colors[Math.floor(Math.random() * colors.length)],
-                speedY: Math.random() * 3 + 2,
-                speedX: Math.random() * 2 - 1,
-                rotation: Math.random() * 360,
-                rotationSpeed: Math.random() * 4 - 2
+                x: Math.random() * canvas.width, y: Math.random() * canvas.height - canvas.height, 
+                size: Math.random() * 8 + 4, color: colors[Math.floor(Math.random() * colors.length)],
+                speedY: Math.random() * 3 + 2, speedX: Math.random() * 2 - 1,
+                rotation: Math.random() * 360, rotationSpeed: Math.random() * 4 - 2
             };
         }
-
-        function startConfetti() {
-            particles = [];
-            for (let i = 0; i < 150; i++) particles.push(createParticle());
-            if (!animationId) loopConfetti();
-        }
-
-        function stopConfetti() {
-            if (animationId) { cancelAnimationFrame(animationId); animationId = null; }
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-        }
-
+        function startConfetti() { particles = []; for (let i = 0; i < 150; i++) particles.push(createParticle()); if (!animationId) loopConfetti(); }
+        function stopConfetti() { if (animationId) { cancelAnimationFrame(animationId); animationId = null; } ctx.clearRect(0, 0, canvas.width, canvas.height); }
         function loopConfetti() {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
             particles.forEach((p, index) => {
                 p.y += p.speedY; p.x += p.speedX; p.rotation += p.rotationSpeed;
                 ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.rotation * Math.PI / 180);
-                ctx.fillStyle = p.color; ctx.fillRect(-p.size/2, -p.size/2, p.size, p.size);
-                ctx.restore();
+                ctx.fillStyle = p.color; ctx.fillRect(-p.size/2, -p.size/2, p.size, p.size); ctx.restore();
                 if (p.y > canvas.height) particles[index] = createParticle();
             });
             animationId = requestAnimationFrame(loopConfetti);
@@ -369,8 +327,7 @@
         function triggerCelebration() { startConfetti(); setTimeout(stopConfetti, 3000); }
 
         // --- 2. 音效 ---
-        let audioCtx = null;
-        let isMuted = false;
+        let audioCtx = null; let isMuted = false;
         function initAudio() { if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)(); }
         function playTone(freq, duration, type = 'sine') {
             if (isMuted || !audioCtx) return;
@@ -392,13 +349,11 @@
             const gain = audioCtx.createGain(); const filter = audioCtx.createBiquadFilter();
             filter.type = 'lowpass'; filter.frequency.value = 1000;
             noise.connect(filter); filter.connect(gain); gain.connect(audioCtx.destination);
-            gain.gain.setValueAtTime(0.5, audioCtx.currentTime);
-            gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
+            gain.gain.setValueAtTime(0.5, audioCtx.currentTime); gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
             noise.start();
         }
         function playCheer() {
-            initAudio();
-            playTone(523.25, 0.2, 'triangle'); setTimeout(() => playTone(659.25, 0.2, 'triangle'), 150);
+            initAudio(); playTone(523.25, 0.2, 'triangle'); setTimeout(() => playTone(659.25, 0.2, 'triangle'), 150);
             setTimeout(() => playTone(783.99, 0.4, 'square'), 300); setTimeout(playApplause, 300);
         }
         function toggleSound() {
@@ -426,8 +381,6 @@
             document.body.addEventListener('click', () => initAudio(), { once: true });
             try { loadSettings(); } catch (e) { localStorage.removeItem('studyApp_data'); }
             renderSetupList();
-            
-            // 讀取字體設定
             const savedFont = localStorage.getItem('studyApp_fontSize');
             if(savedFont) {
                 document.documentElement.style.setProperty('--list-font-size', savedFont + 'px');
