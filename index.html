@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>科學班讀書計畫 V7.3</title>
+    <title>科學班讀書計畫 V7.4</title>
     
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -22,12 +22,14 @@
             background-color: #121212;
             color: #ffffff;
             margin: 0;
-            height: 100vh;
+            /* 使用 dvh (Dynamic Viewport Height) 解決手機網址列伸縮問題 */
+            height: 100dvh; 
             overflow: hidden;
             display: flex;
             flex-direction: column;
             padding-top: env(safe-area-inset-top);
-            padding-bottom: env(safe-area-inset-bottom);
+            /* 底部 padding 改由 bottom-action-area 處理，這裡設為 0 */
+            padding-bottom: 0;
             user-select: none;
         }
 
@@ -86,10 +88,8 @@
             padding: 10px 15px;
             border-radius: 10px;
             border: 1px solid #333;
-            /* margin-bottom: 5px;  現在只有一行，不需要底部 margin */
         }
         
-        /* 由於只剩一行，簡化結構 */
         .control-row {
             display: flex;
             align-items: center;
@@ -109,6 +109,8 @@
             overflow-y: auto;
             padding: 0 15px;
             min-height: 0;
+            /* 增加底部緩衝，確保最後一個項目不會貼太緊 */
+            padding-bottom: 10px; 
         }
         
         .subject-row {
@@ -134,7 +136,7 @@
             flex: 1;
             width: 0;
             min-width: 50px;
-            font-size: var(--list-font-size); /* 動態字體 */
+            font-size: var(--list-font-size);
             font-weight: 500;
             background: transparent;
             border: none;
@@ -160,24 +162,34 @@
         }
         .order-btn:active { background: #555; color: white; }
 
-        /* --- 底部按鈕區 (Flexbox 修改) --- */
+        /* --- 底部按鈕區 (關鍵修正) --- */
         .bottom-action-area {
             flex-shrink: 0;
-            padding: 10px 15px 15px 15px;
             background: #121212;
-            display: flex;  /* 改為 Flexbox */
-            gap: 10px;      /* 按鈕間距 */
-            align-items: stretch; /* 讓按鈕高度一致 */
+            display: flex;
+            gap: 10px;
+            align-items: stretch;
+            
+            /* 上方的內距 */
+            padding-top: 10px;
+            /* 左右內距 */
+            padding-left: 15px;
+            padding-right: 15px;
+            
+            /* 關鍵：底部的內距 = 15px + 手機安全區域 (Home Indicator) 的高度 */
+            padding-bottom: calc(15px + env(safe-area-inset-bottom));
+            
+            border-top: 1px solid #222; /* 增加一條不明顯的分隔線，視覺更穩定 */
         }
 
         /* 字體調整按鈕 */
         .font-btn {
             flex-shrink: 0;
-            width: 50px; /* 固定寬度 */
+            width: 50px;
             background-color: #252525;
             color: #ccc;
             border: 1px solid #333;
-            font-family: serif; /* 襯線字體讓 A 更有型 */
+            font-family: serif; 
             display: flex;
             align-items: center;
             justify-content: center;
@@ -185,12 +197,12 @@
         .font-btn:active { background-color: #333; }
 
         .start-btn {
-            flex: 1; /* 自動佔據剩餘寬度 */
+            flex: 1;
             padding: 14px;
             background: linear-gradient(135deg, #2ecc71, #27ae60);
             color: white; font-size: 18px; border-radius: 12px;
             box-shadow: 0 4px 10px rgba(46, 204, 113, 0.4);
-            white-space: nowrap; /* 防止文字換行 */
+            white-space: nowrap;
         }
 
         /* --- 抽籤頁面 --- */
@@ -223,7 +235,7 @@
     <div id="setup-screen">
         <div class="header-nav">
             <button id="sound-btn" class="icon-btn active" onclick="toggleSound()">🔊</button>
-            <h2>讀書計畫 V7.3</h2>
+            <h2>讀書計畫 V7.4</h2>
             <button class="icon-btn" onclick="showStats()">🔥 熱力圖</button>
         </div>
         
@@ -246,7 +258,7 @@
             </div>
 
         <div class="bottom-action-area">
-            <button class="font-btn" onclick="adjustFontSize(-1)" style="font-weight: 300; font-size: 14px;">A</button>
+            <button class="font-btn" onclick="adjustFontSize(-1)" style="font-weight: 300; font-size: 18px;">a</button>
             
             <button class="start-btn" onclick="startSession()">🚀 開始執行</button>
             
@@ -281,17 +293,12 @@
 
     <script>
         // --- JS 功能區 ---
-        
-        // 字體調整邏輯 (修改為增減模式)
         let currentFontSize = 16;
         function adjustFontSize(delta) {
             playTone(800, 0.05, 'triangle');
             currentFontSize += delta;
-            
-            // 限制範圍 (例如 12px ~ 24px)
             if (currentFontSize < 12) currentFontSize = 12;
             if (currentFontSize > 24) currentFontSize = 24;
-
             document.documentElement.style.setProperty('--list-font-size', currentFontSize + 'px');
             localStorage.setItem('studyApp_fontSize', currentFontSize);
         }
@@ -381,11 +388,9 @@
             document.body.addEventListener('click', () => initAudio(), { once: true });
             try { loadSettings(); } catch (e) { localStorage.removeItem('studyApp_data'); }
             renderSetupList();
-            
-            // 讀取並套用字體設定
             const savedFont = localStorage.getItem('studyApp_fontSize');
             if(savedFont) {
-                currentFontSize = parseInt(savedFont); // 更新全域變數
+                currentFontSize = parseInt(savedFont);
                 document.documentElement.style.setProperty('--list-font-size', currentFontSize + 'px');
             }
         });
