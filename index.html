@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>科學班讀書計畫 V6</title>
+    <title>科學班讀書計畫 V7</title>
     
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -23,7 +23,7 @@
             flex-direction: column;
             padding-top: env(safe-area-inset-top);
             padding-bottom: env(safe-area-inset-bottom);
-            user-select: none; /* 防止長按選取文字 */
+            user-select: none;
         }
 
         .hidden { display: none !important; }
@@ -39,22 +39,15 @@
         }
         button:active { transform: scale(0.92); }
 
-        /* --- 動畫特效 --- */
-        @keyframes shake {
-            0% { transform: translate(1px, 1px) rotate(0deg); }
-            10% { transform: translate(-1px, -2px) rotate(-1deg); }
-            20% { transform: translate(-3px, 0px) rotate(1deg); }
-            30% { transform: translate(3px, 2px) rotate(0deg); }
-            40% { transform: translate(1px, -1px) rotate(1deg); }
-            50% { transform: translate(-1px, 2px) rotate(-1deg); }
-            60% { transform: translate(-3px, 1px) rotate(0deg); }
-            70% { transform: translate(3px, 1px) rotate(-1deg); }
-            80% { transform: translate(-1px, -1px) rotate(1deg); }
-            90% { transform: translate(1px, 2px) rotate(0deg); }
-            100% { transform: translate(1px, -2px) rotate(-1deg); }
-        }
-        .shake-effect {
-            animation: shake 0.5s;
+        /* --- 彩帶 Canvas --- */
+        #confetti-canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none; /* 讓點擊可以穿透 */
+            z-index: 999;
         }
 
         /* --- Header --- */
@@ -66,15 +59,11 @@
             background: #1e1e1e;
             border-bottom: 1px solid #333;
             min-height: 50px;
+            z-index: 10;
         }
         h2 { margin: 0; color: #3498db; font-size: 18px; }
         .icon-btn {
-            background: #333;
-            color: #ddd;
-            font-size: 16px;
-            padding: 8px 12px;
-            border-radius: 8px;
-            margin-left: 8px;
+            background: #333; color: #ddd; font-size: 16px; padding: 8px 12px; border-radius: 8px; margin-left: 8px;
         }
         .icon-btn.active { background: #3498db; color: white; }
 
@@ -100,17 +89,35 @@
         input:checked + .slider:before { transform: translateX(22px); }
 
         /* 列表 */
-        .list-container { flex: 1; overflow-y: auto; padding: 0 15px 80px 15px; } /* 增加底部 padding 防止按鈕擋住 */
+        .list-container { flex: 1; overflow-y: auto; padding: 0 15px 100px 15px; }
         
         .subject-row {
             display: flex; align-items: center; background-color: #1e1e1e;
             margin-bottom: 8px; padding: 8px 12px; border-radius: 10px; border: 1px solid #333;
         }
         input[type="checkbox"].sub-check { transform: scale(1.3); margin-right: 10px; accent-color: #3498db; }
-        .subject-name { flex: 1; font-size: 16px; font-weight: 500; }
+        
+        /* 可編輯的科目名稱 Input */
+        .name-input {
+            flex: 1;
+            font-size: 16px;
+            font-weight: 500;
+            background: transparent;
+            border: none;
+            color: white;
+            border-bottom: 1px solid transparent;
+            padding: 4px 0;
+            margin-right: 10px;
+            border-radius: 0;
+        }
+        .name-input:focus {
+            border-bottom: 1px solid #3498db;
+            outline: none;
+            background: #252525;
+        }
+
         .weight-input { width: 40px; height: 30px; text-align: center; font-size: 16px; background-color: #2c3e50; color: #fff; border: 1px solid #444; border-radius: 6px; margin-right: 10px;}
 
-        /* 排序按鈕 */
         .order-btn-group { display: flex; flex-direction: column; gap: 2px; }
         .order-btn {
             background: #333; color: #aaa; border-radius: 4px; padding: 2px 8px; font-size: 10px; height: 18px; line-height: 14px;
@@ -118,41 +125,69 @@
         .order-btn:active { background: #555; color: white; }
 
         .start-btn {
-            position: absolute; bottom: 20px; left: 15px; right: 15px;
+            position: absolute; bottom: 30px; left: 20px; right: 20px;
             padding: 16px;
             background: linear-gradient(135deg, #2ecc71, #27ae60);
             color: white; font-size: 20px; border-radius: 16px;
             box-shadow: 0 4px 15px rgba(46, 204, 113, 0.4);
-            z-index: 10;
+            z-index: 20;
         }
 
         /* --- 抽籤頁面 --- */
-        #draw-screen { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; position: relative; }
+        #draw-screen { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; position: relative; z-index: 10;}
         #deck-status { position: absolute; top: 30px; right: 20px; background: #e67e22; padding: 6px 12px; border-radius: 20px; font-size: 14px; font-weight: bold; color: white; }
-        #result-display { font-size: 64px; font-weight: 800; color: #e74c3c; margin-bottom: 10px; text-align: center; padding: 0 20px; line-height: 1.2; }
+        #result-display { font-size: 64px; font-weight: 800; color: #e74c3c; margin-bottom: 10px; text-align: center; padding: 0 20px; line-height: 1.2; text-shadow: 0 0 20px rgba(231, 76, 60, 0.5); }
         #prob-display { color: #7f8c8d; font-size: 16px; margin-bottom: 60px; }
         .action-btn { padding: 20px 80px; font-size: 24px; background: linear-gradient(135deg, #3498db, #2980b9); color: white; border-radius: 50px; margin-bottom: 20px; box-shadow: 0 8px 20px rgba(52, 152, 219, 0.4); }
         .action-btn:disabled { background: #555; color: #888; box-shadow: none; }
         .back-btn { background: transparent; color: #7f8c8d; font-size: 14px; padding: 10px 20px; }
 
-        /* --- 統計頁面 --- */
-        #stats-screen { flex: 1; display: flex; flex-direction: column; background: #121212; }
-        .chart-wrapper { flex: 1; display: flex; flex-direction: column; justify-content: flex-end; padding: 20px; padding-bottom: 40px; }
-        .chart-container { display: flex; align-items: flex-end; justify-content: space-around; height: 300px; border-bottom: 2px solid #555; padding-bottom: 5px; }
-        .bar-col { flex: 1; display: flex; flex-direction: column; align-items: center; margin: 0 2px; max-width: 40px; }
-        .bar-val { font-size: 10px; color: #aaa; margin-bottom: 4px; }
-        .bar { width: 100%; background: #3498db; border-radius: 4px 4px 0 0; min-height: 2px; transition: height 0.5s; }
-        .bar.highlight { background: #e74c3c; }
-        .bar-label { margin-top: 8px; font-size: 12px; color: #ccc; writing-mode: vertical-rl; text-orientation: mixed; max-height: 80px; }
+        /* --- 熱力圖 (Heatmap) --- */
+        #stats-screen { flex: 1; display: flex; flex-direction: column; background: #121212; z-index: 10;}
+        .heatmap-container {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+        }
+        .heatmap-grid {
+            display: grid;
+            /* 第一欄是科目名，後面7欄是日期 */
+            grid-template-columns: auto repeat(7, 1fr);
+            gap: 4px;
+            align-items: center;
+        }
+        .hm-cell {
+            width: 100%;
+            aspect-ratio: 1;
+            border-radius: 4px;
+            background-color: #1e1e1e; /* 預設無數據顏色 */
+        }
+        .hm-label-row {
+            font-size: 10px; color: #888; text-align: center; margin-bottom: 5px;
+        }
+        .hm-label-col {
+            font-size: 12px; color: #ccc; text-align: right; padding-right: 10px;
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 80px;
+        }
+        
+        /* 熱力圖顏色等級 */
+        .lvl-0 { background-color: #252525; }
+        .lvl-1 { background-color: #0e4429; }
+        .lvl-2 { background-color: #006d32; }
+        .lvl-3 { background-color: #26a641; }
+        .lvl-4 { background-color: #39d353; box-shadow: 0 0 5px #39d353; }
+
     </style>
 </head>
 <body>
 
+    <canvas id="confetti-canvas"></canvas>
+
     <div id="setup-screen">
         <div class="header-nav">
             <button id="sound-btn" class="icon-btn active" onclick="toggleSound()">🔊</button>
-            <h2>讀書計畫 V6</h2>
-            <button class="icon-btn" onclick="showStats()">📊 統計</button>
+            <h2>讀書計畫 V7</h2>
+            <button class="icon-btn" onclick="showStats()">🔥 熱力圖</button>
         </div>
         
         <div class="control-bar">
@@ -161,7 +196,7 @@
                 <div style="font-size:12px; color:#aaa;">讀完一科少一科</div>
             </div>
             <label class="switch-container">
-                <input type="checkbox" id="deck-mode-toggle" onchange="clickSound()">
+                <input type="checkbox" id="deck-mode-toggle" onchange="playTone(800, 0.05, 'triangle')">
                 <span class="slider"></span>
             </label>
         </div>
@@ -181,35 +216,105 @@
 
     <div id="stats-screen" class="hidden">
         <div class="header-nav">
-            <h2>近7日統計</h2>
+            <h2>讀書熱力圖 (近7日)</h2>
             <button class="icon-btn" onclick="closeStats()">✕</button>
         </div>
-        <div class="chart-wrapper">
-            <div id="chart-area" class="chart-container"></div>
-            <div style="text-align:center; margin-top:10px; font-size:12px; color:#666;">數據保存在本機</div>
+        
+        <div style="display:grid; grid-template-columns: auto repeat(7, 1fr); gap:4px; padding:10px 20px 0 20px; font-size:10px; color:#666; text-align:center;">
+            <div style="width:80px;"></div> <div id="date-headers" style="display:contents;"></div>
         </div>
+
+        <div class="heatmap-container">
+            <div id="heatmap-grid" class="heatmap-grid">
+                </div>
+        </div>
+        
         <div style="text-align:center; padding:20px;">
             <button onclick="clearHistory()" style="color:#e74c3c; background:none; border:1px solid #e74c3c; padding:8px 20px; border-radius:20px;">清除紀錄</button>
         </div>
     </div>
 
     <script>
-        // --- 音效庫 (Base64) ---
-        // 短促的點擊聲
-        const clickAudioSrc = "data:audio/wav;base64,UklGRi4AAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQAAAAAAAAAAgAAAAIAAAACAAAA="; 
-        // 這裡為了保持代碼簡潔，我使用簡單的音頻生成邏輯，或您可替換為真實 Base64
-        // 為了確保有聲音，這裡使用 JS AudioContext 動態生成 (比 Base64 檔案更小且靈活)
+        // --- 1. 彩帶特效 (Canvas Confetti) ---
+        const canvas = document.getElementById('confetti-canvas');
+        const ctx = canvas.getContext('2d');
+        let particles = [];
+        let animationId = null;
 
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
+
+        function createParticle() {
+            const colors = ['#e74c3c', '#3498db', '#f1c40f', '#2ecc71', '#9b59b6'];
+            return {
+                x: Math.random() * canvas.width,
+                y: Math.random() * canvas.height - canvas.height, // 從上方開始
+                size: Math.random() * 8 + 4,
+                color: colors[Math.floor(Math.random() * colors.length)],
+                speedY: Math.random() * 3 + 2,
+                speedX: Math.random() * 2 - 1,
+                rotation: Math.random() * 360,
+                rotationSpeed: Math.random() * 4 - 2
+            };
+        }
+
+        function startConfetti() {
+            particles = [];
+            for (let i = 0; i < 150; i++) {
+                particles.push(createParticle());
+            }
+            if (!animationId) loopConfetti();
+        }
+
+        function stopConfetti() {
+            if (animationId) {
+                cancelAnimationFrame(animationId);
+                animationId = null;
+            }
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+        }
+
+        function loopConfetti() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            particles.forEach((p, index) => {
+                p.y += p.speedY;
+                p.x += p.speedX;
+                p.rotation += p.rotationSpeed;
+                
+                // 畫彩帶 (簡單矩形模擬)
+                ctx.save();
+                ctx.translate(p.x, p.y);
+                ctx.rotate(p.rotation * Math.PI / 180);
+                ctx.fillStyle = p.color;
+                ctx.fillRect(-p.size/2, -p.size/2, p.size, p.size);
+                ctx.restore();
+
+                // 重置超出螢幕的粒子
+                if (p.y > canvas.height) {
+                    particles[index] = createParticle(); // 循環落下
+                }
+            });
+            animationId = requestAnimationFrame(loopConfetti);
+        }
+
+        // 停止特效定時器
+        function triggerCelebration() {
+            startConfetti();
+            setTimeout(stopConfetti, 3000); // 3秒後停止
+        }
+
+        // --- 2. 音效系統 (Web Audio API - 歡呼聲) ---
         let audioCtx = null;
         let isMuted = false;
 
         function initAudio() {
-            if (!audioCtx) {
-                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-            }
+            if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
         }
 
-        // 產生嗶嗶聲 (頻率, 持續時間, 類型)
         function playTone(freq, duration, type = 'sine') {
             if (isMuted || !audioCtx) return;
             try {
@@ -225,57 +330,78 @@
             } catch(e) {}
         }
 
-        function clickSound() { 
-            initAudio();
-            playTone(800, 0.05, 'triangle'); // 清脆的短音
+        // 模擬掌聲 (粉紅噪音 + 隨機)
+        function playApplause() {
+            if (isMuted || !audioCtx) return;
+            const duration = 2.0;
+            const bufferSize = audioCtx.sampleRate * duration;
+            const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+            const data = buffer.getChannelData(0);
+            
+            for (let i = 0; i < bufferSize; i++) {
+                data[i] = (Math.random() * 2 - 1) * Math.exp(-i / (audioCtx.sampleRate * 0.5)); // 衰減
+            }
+
+            const noise = audioCtx.createBufferSource();
+            noise.buffer = buffer;
+            const gain = audioCtx.createGain();
+            // 讓聲音像人群
+            const filter = audioCtx.createBiquadFilter();
+            filter.type = 'lowpass';
+            filter.frequency.value = 1000;
+
+            noise.connect(filter);
+            filter.connect(gain);
+            gain.connect(audioCtx.destination);
+            
+            gain.gain.setValueAtTime(0.5, audioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
+            
+            noise.start();
         }
 
-        function successSound() {
+        function playCheer() {
             initAudio();
-            // 成功音效：三連音
-            playTone(500, 0.1, 'sine');
-            setTimeout(() => playTone(800, 0.1, 'sine'), 100);
-            setTimeout(() => playTone(1200, 0.4, 'square'), 200);
+            // 1. 勝利號角
+            playTone(523.25, 0.2, 'triangle'); // Do
+            setTimeout(() => playTone(659.25, 0.2, 'triangle'), 150); // Mi
+            setTimeout(() => playTone(783.99, 0.4, 'square'), 300); // Sol (強烈)
+            
+            // 2. 掌聲
+            setTimeout(playApplause, 300);
         }
 
         function toggleSound() {
             isMuted = !isMuted;
-            const btn = document.getElementById('sound-btn');
-            btn.innerHTML = isMuted ? '🔇' : '🔊';
-            btn.classList.toggle('active', !isMuted);
-            if(!isMuted) clickSound();
+            document.getElementById('sound-btn').innerHTML = isMuted ? '🔇' : '🔊';
+            document.getElementById('sound-btn').classList.toggle('active', !isMuted);
+            if(!isMuted) playTone(800, 0.05, 'triangle');
         }
 
-        // --- 觸覺回饋 ---
-        function triggerHaptic() {
-            // Android 震動
-            if (navigator.vibrate) navigator.vibrate(30);
-            // iOS/通用 畫面震動特效
-            document.body.classList.add('shake-effect');
-            setTimeout(() => document.body.classList.remove('shake-effect'), 500);
-        }
-
-        // --- 資料設定 ---
+        // --- 3. 核心邏輯 ---
+        
+        // 預設資料 + 5個自訂科目
         let defaultSubjects = [
             { name: "數學", weight: 5 }, { name: "物理", weight: 5 },
             { name: "化學", weight: 4 }, { name: "生物", weight: 3 },
             { name: "英文", weight: 3 }, { name: "國文", weight: 2 },
             { name: "地科", weight: 2 }, { name: "程式", weight: 4 },
-            { name: "專題", weight: 3 }
+            { name: "專題", weight: 3 },
+            { name: "自訂科目 1", weight: 1 }, { name: "自訂科目 2", weight: 1 },
+            { name: "自訂科目 3", weight: 1 }, { name: "自訂科目 4", weight: 1 },
+            { name: "自訂科目 5", weight: 1 }
         ];
 
         let activePool = [];
         let currentDeck = [];
         let isDeckMode = false;
 
-        // --- 初始化 ---
         window.addEventListener('load', () => {
-            document.body.addEventListener('click', () => initAudio(), { once: true }); // 首次點擊解鎖音效
+            document.body.addEventListener('click', () => initAudio(), { once: true });
             try { loadSettings(); } catch (e) { localStorage.removeItem('studyApp_data'); }
             renderSetupList();
         });
 
-        // --- 渲染列表 (含排序按鈕) ---
         function renderSetupList() {
             const container = document.getElementById('subject-list');
             if (!container) return;
@@ -286,9 +412,10 @@
                 row.className = 'subject-row';
                 const isChecked = sub.checked !== false;
                 
+                // 注意：這裡將科目名稱改成 <input>
                 row.innerHTML = `
-                    <input type="checkbox" class="sub-check" id="chk-${index}" ${isChecked ? 'checked' : ''} onchange="clickSound()">
-                    <label for="chk-${index}" class="subject-name">${sub.name}</label>
+                    <input type="checkbox" class="sub-check" id="chk-${index}" ${isChecked ? 'checked' : ''} onchange="playTone(800, 0.05, 'triangle')">
+                    <input type="text" class="name-input" value="${sub.name}" id="name-${index}" onchange="updateName(${index}, this.value)">
                     <input type="number" id="w-${index}" class="weight-input" 
                            value="${sub.weight}" min="1" max="9" inputmode="numeric" onfocus="this.select()">
                     
@@ -306,40 +433,40 @@
             } catch(e) {}
         }
 
-        // --- 排序功能 ---
+        function updateName(index, newName) {
+            defaultSubjects[index].name = newName;
+            saveSettings();
+        }
+
         function moveItem(index, direction) {
-            clickSound();
+            playTone(800, 0.05, 'triangle');
             const newIndex = index + direction;
             if (newIndex < 0 || newIndex >= defaultSubjects.length) return;
-
-            // 先儲存當前 UI 的數值，避免移動後數據丟失
             saveCurrentUIValues();
-
-            // 交換陣列位置
             [defaultSubjects[index], defaultSubjects[newIndex]] = [defaultSubjects[newIndex], defaultSubjects[index]];
-            
             renderSetupList();
-            saveSettings(); // 移動後立刻存檔
+            saveSettings();
         }
 
         function saveCurrentUIValues() {
             const checkboxes = document.querySelectorAll('#subject-list .sub-check');
             checkboxes.forEach((chk, index) => {
                 const weightInput = document.getElementById(`w-${index}`);
+                const nameInput = document.getElementById(`name-${index}`);
                 let val = parseInt(weightInput.value) || 1;
+                
                 defaultSubjects[index].checked = chk.checked;
                 defaultSubjects[index].weight = val;
+                defaultSubjects[index].name = nameInput.value; // 確保名稱也被同步
             });
         }
 
         function startSession() {
-            clickSound();
+            playTone(1000, 0.1, 'sine');
             try {
-                saveCurrentUIValues(); // 獲取最新數值
+                saveCurrentUIValues();
                 activePool = defaultSubjects.filter(s => s.checked).map(s => ({name: s.name, weight: s.weight}));
-
                 if (activePool.length < 1) { alert("請至少勾選 1 個科目！"); return; }
-
                 saveSettings();
 
                 const toggle = document.getElementById('deck-mode-toggle');
@@ -352,26 +479,25 @@
                 } else {
                     document.getElementById('deck-status').classList.add('hidden');
                 }
-
                 switchScreen('draw-screen');
                 resetDrawScreen();
             } catch (err) { alert("啟動失敗: " + err.message); }
         }
 
         function draw() {
-            triggerHaptic(); // 震動 + 搖晃
+            // Android震動 + iOS視覺震動
+            if (navigator.vibrate) navigator.vibrate(30); 
 
             let pool = isDeckMode ? currentDeck : activePool;
             if (pool.length === 0) { alert("所有科目都讀完了！"); return; }
 
-            // 簡單的動畫效果 (快速跳動數字)
             const resultDisplay = document.getElementById('result-display');
             let counter = 0;
             let shuffle = setInterval(() => {
                 resultDisplay.innerText = pool[Math.floor(Math.random() * pool.length)].name;
-                clickSound(); // 過程中的音效
+                playTone(200 + counter*50, 0.03, 'square'); // 跑馬燈音效
                 counter++;
-                if(counter > 8) {
+                if(counter > 10) {
                     clearInterval(shuffle);
                     finalizeDraw(pool);
                 }
@@ -379,8 +505,6 @@
         }
 
         function finalizeDraw(pool) {
-            successSound(); // 成功音效
-
             const totalWeight = pool.reduce((sum, item) => sum + item.weight, 0);
             let randomNum = Math.random() * totalWeight;
             let selectedIndex = -1, selectedItem = null;
@@ -393,6 +517,8 @@
             if(selectedItem) {
                 showResult(selectedItem, totalWeight);
                 recordHistory(selectedItem.name);
+                playCheer();       // 播放歡呼
+                triggerCelebration(); // 播放彩帶
             }
 
             if (isDeckMode) {
@@ -421,59 +547,100 @@
             }
         }
 
-        // --- 歷史紀錄與統計 ---
+        // --- 熱力圖系統 ---
         function recordHistory(subjectName) {
             try {
                 let history = JSON.parse(localStorage.getItem('study_history') || '[]');
                 history.push({ sub: subjectName, time: Date.now() });
-                const sevenDaysAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
-                history = history.filter(h => h.time > sevenDaysAgo);
+                // 只保留30天資料以免熱力圖爆掉
+                const daysLimit = Date.now() - 30 * 24 * 60 * 60 * 1000;
+                history = history.filter(h => h.time > daysLimit);
                 localStorage.setItem('study_history', JSON.stringify(history));
             } catch(e) {}
         }
 
         function showStats() {
-            clickSound();
+            playTone(800, 0.05, 'triangle');
             switchScreen('stats-screen');
-            renderChart();
+            renderHeatmap();
         }
 
-        function renderChart() {
-            const chartArea = document.getElementById('chart-area');
-            chartArea.innerHTML = '';
+        function renderHeatmap() {
+            const grid = document.getElementById('heatmap-grid');
+            const headerRow = document.getElementById('date-headers');
+            grid.innerHTML = '';
+            headerRow.innerHTML = '';
+
             let history = [];
             try { history = JSON.parse(localStorage.getItem('study_history') || '[]'); } catch(e){}
 
-            if (history.length === 0) {
-                chartArea.innerHTML = '<div style="color:#555; align-self:center; width:100%; text-align:center;">暫無數據</div>';
-                return;
+            // 1. 準備日期 (X軸) - 過去6天 + 今天
+            const dates = [];
+            for(let i=6; i>=0; i--) {
+                const d = new Date();
+                d.setDate(d.getDate() - i);
+                const dateStr = `${d.getMonth()+1}/${d.getDate()}`;
+                dates.push({ str: dateStr, obj: d });
+                
+                // 渲染標頭
+                const th = document.createElement('div');
+                th.innerText = dateStr;
+                headerRow.appendChild(th);
             }
 
-            const counts = {};
-            history.forEach(h => { counts[h.sub] = (counts[h.sub] || 0) + 1; });
-            const maxCount = Math.max(...Object.values(counts));
-            const subjectsToShow = Object.keys(counts);
+            // 2. 準備科目 (Y軸) - 只顯示有勾選或有歷史紀錄的
+            const activeSubNames = defaultSubjects.map(s => s.name); // 顯示所有列表中的科目
+            
+            // 3. 統計數據
+            // map: counts[subjectName][dateIndex 0-6] = count
+            const dataMap = {};
+            activeSubNames.forEach(name => {
+                dataMap[name] = [0, 0, 0, 0, 0, 0, 0];
+            });
 
-            subjectsToShow.forEach(sub => {
-                const count = counts[sub];
-                const heightPercent = (count / maxCount) * 100;
-                const isScience = ['數學', '物理', '化學', '程式'].includes(sub);
-                
-                const col = document.createElement('div');
-                col.className = 'bar-col';
-                col.innerHTML = `
-                    <div class="bar-val">${count}</div>
-                    <div class="bar ${isScience ? 'highlight' : ''}" style="height: ${heightPercent}%"></div>
-                    <div class="bar-label">${sub}</div>
-                `;
-                chartArea.appendChild(col);
+            history.forEach(h => {
+                const hDate = new Date(h.time);
+                // 檢查這筆紀錄是否在最近7天內
+                // 簡單比對: 跟 dates 陣列裡的日期比對
+                const idx = dates.findIndex(d => 
+                    d.obj.getDate() === hDate.getDate() && 
+                    d.obj.getMonth() === hDate.getMonth()
+                );
+                if(idx !== -1 && dataMap[h.sub]) {
+                    dataMap[h.sub][idx]++;
+                }
+            });
+
+            // 4. 繪製 Grid
+            activeSubNames.forEach(subName => {
+                // 科目名稱欄
+                const label = document.createElement('div');
+                label.className = 'hm-label-col';
+                label.innerText = subName;
+                grid.appendChild(label);
+
+                // 7個格子的數據
+                const counts = dataMap[subName];
+                counts.forEach(count => {
+                    const cell = document.createElement('div');
+                    cell.className = 'hm-cell';
+                    
+                    // 決定顏色等級
+                    if(count > 0) cell.classList.add('lvl-1');
+                    if(count > 1) cell.classList.remove('lvl-1'), cell.classList.add('lvl-2');
+                    if(count > 3) cell.classList.remove('lvl-2'), cell.classList.add('lvl-3');
+                    if(count > 5) cell.classList.remove('lvl-3'), cell.classList.add('lvl-4');
+                    
+                    cell.title = `${subName}: ${count}次`;
+                    grid.appendChild(cell);
+                });
             });
         }
 
         function clearHistory() {
             if(confirm("確定要清除統計紀錄嗎？")) {
                 localStorage.removeItem('study_history');
-                renderChart();
+                renderHeatmap();
             }
         }
 
@@ -484,8 +651,12 @@
                 if(el) el.classList.toggle('hidden', id !== screenId);
             });
         }
-        function closeStats() { clickSound(); switchScreen('setup-screen'); }
-        function goBack() { clickSound(); switchScreen('setup-screen'); }
+        function closeStats() { playTone(800, 0.05, 'triangle'); switchScreen('setup-screen'); }
+        function goBack() { 
+            stopConfetti(); // 離開時停止彩帶
+            playTone(800, 0.05, 'triangle'); 
+            switchScreen('setup-screen'); 
+        }
         function updateDeckStatus() { document.getElementById('deck-status').innerText = `剩餘: ${currentDeck.length}`; }
         function resetDrawScreen() {
             document.getElementById('result-display').innerText = "準備";
@@ -495,8 +666,6 @@
             btn.disabled = false;
             btn.innerText = "抽選";
         }
-
-        // --- 存檔保護機制 ---
         function saveSettings() {
             try {
                 const toggle = document.getElementById('deck-mode-toggle');
@@ -505,15 +674,11 @@
                 localStorage.setItem('studyApp_deckMode', data.deckMode);
             } catch(e) {}
         }
-
         function loadSettings() {
             const saved = localStorage.getItem('studyApp_data');
             if (saved) {
                 const parsed = JSON.parse(saved);
-                // 為了支援排序，這裡直接將儲存的陣列視為最新的 (不再使用 defaultSubjects 的順序)
-                if(Array.isArray(parsed) && parsed.length > 0) {
-                    defaultSubjects = parsed;
-                }
+                if(Array.isArray(parsed) && parsed.length > 0) defaultSubjects = parsed;
             }
         }
     </script>
