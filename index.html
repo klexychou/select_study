@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>科學班讀書計畫 V7</title>
+    <title>科學班讀書計畫 V7.1</title>
     
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -11,14 +11,19 @@
     <link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100' style='background-color: %232c3e50'%3E%3Crect width='100' height='100' fill='%232c3e50'/%3E%3Ctext y='50%25' x='50%25' dominant-baseline='central' text-anchor='middle' font-size='60' %3E📚%3C/text%3E%3C/svg%3E">
 
     <style>
+        /* --- 全局變數 (控制字體大小) --- */
+        :root {
+            --list-font-size: 16px;
+        }
+
         /* --- 全局設定 --- */
         body {
             font-family: "Microsoft JhengHei", -apple-system, BlinkMacSystemFont, sans-serif;
             background-color: #121212;
             color: #ffffff;
             margin: 0;
-            height: 100vh;
-            overflow: hidden;
+            height: 100vh; /* 佔滿全螢幕 */
+            overflow: hidden; /* 禁止整個網頁滾動，只讓列表滾動 */
             display: flex;
             flex-direction: column;
             padding-top: env(safe-area-inset-top);
@@ -41,17 +46,12 @@
 
         /* --- 彩帶 Canvas --- */
         #confetti-canvas {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            pointer-events: none; /* 讓點擊可以穿透 */
-            z-index: 999;
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 999;
         }
 
         /* --- Header --- */
         .header-nav {
+            flex-shrink: 0; /* 禁止壓縮 */
             padding: 10px 20px;
             display: flex;
             justify-content: space-between;
@@ -67,18 +67,38 @@
         }
         .icon-btn.active { background: #3498db; color: white; }
 
-        /* --- 設定頁面 --- */
-        #setup-screen { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+        /* --- 設定頁面 (Flexbox 佈局核心) --- */
+        #setup-screen {
+            flex: 1; /* 佔滿剩餘空間 */
+            display: flex;
+            flex-direction: column; /* 上下排列 */
+            overflow: hidden;
+        }
         
+        /* 控制區塊 (不重複模式 + 字體大小) */
+        .controls-wrapper {
+            flex-shrink: 0; /* 禁止壓縮 */
+            padding: 10px 15px;
+            background: #121212;
+        }
+
         .control-bar {
             background-color: #252525;
-            padding: 12px 20px;
-            margin: 10px 15px;
+            padding: 12px 15px;
             border-radius: 12px;
+            border: 1px solid #333;
+            margin-bottom: 10px;
+        }
+        
+        .control-row {
             display: flex;
             align-items: center;
             justify-content: space-between;
-            border: 1px solid #333;
+        }
+        .control-row:not(:last-child) {
+            margin-bottom: 12px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid #333;
         }
 
         .switch-container { position: relative; display: inline-block; width: 50px; height: 28px; }
@@ -88,26 +108,65 @@
         input:checked + .slider { background-color: #e67e22; }
         input:checked + .slider:before { transform: translateX(22px); }
 
-        /* 列表 */
-        .list-container { flex: 1; overflow-y: auto; padding: 0 15px 100px 15px; }
+        /* 字體滑桿 */
+        .font-slider {
+            width: 100px;
+            height: 6px;
+            background: #444;
+            outline: none;
+            border-radius: 3px;
+            -webkit-appearance: none;
+        }
+        .font-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 18px;
+            height: 18px;
+            background: #3498db;
+            border-radius: 50%;
+            cursor: pointer;
+        }
+
+        /* --- 列表區域 (關鍵修正) --- */
+        .list-container {
+            flex: 1; /* 自動填滿中間剩餘高度 */
+            overflow-y: auto; /* 只有這裡可以滾動 */
+            padding: 0 15px;
+            min-height: 0; /* 防止 Flexbox 溢出 */
+        }
         
         .subject-row {
-            display: flex; align-items: center; background-color: #1e1e1e;
-            margin-bottom: 8px; padding: 8px 12px; border-radius: 10px; border: 1px solid #333;
+            display: flex;
+            align-items: center;
+            background-color: #1e1e1e;
+            margin-bottom: 8px;
+            padding: 8px 10px; /* 稍微減少左右 padding */
+            border-radius: 10px;
+            border: 1px solid #333;
+            /* 防止寬度溢出 */
+            width: 100%;
+            box-sizing: border-box; 
         }
-        input[type="checkbox"].sub-check { transform: scale(1.3); margin-right: 10px; accent-color: #3498db; }
+
+        input[type="checkbox"].sub-check {
+            flex-shrink: 0; /* 禁止壓縮 */
+            transform: scale(1.3);
+            margin-right: 10px;
+            accent-color: #3498db;
+        }
         
         /* 可編輯的科目名稱 Input */
         .name-input {
-            flex: 1;
-            font-size: 16px;
+            flex: 1; /* 自動佔滿中間空間 */
+            width: 0; /* 關鍵！讓 flex item 可以縮小到內容以下，防止撐爆 */
+            min-width: 50px;
+            font-size: var(--list-font-size); /* 使用變數 */
             font-weight: 500;
             background: transparent;
             border: none;
             color: white;
             border-bottom: 1px solid transparent;
             padding: 4px 0;
-            margin-right: 10px;
+            margin-right: 8px;
             border-radius: 0;
         }
         .name-input:focus {
@@ -116,21 +175,45 @@
             background: #252525;
         }
 
-        .weight-input { width: 40px; height: 30px; text-align: center; font-size: 16px; background-color: #2c3e50; color: #fff; border: 1px solid #444; border-radius: 6px; margin-right: 10px;}
+        .weight-input {
+            flex-shrink: 0;
+            width: 36px; /* 稍微縮小 */
+            height: 30px;
+            text-align: center;
+            font-size: 16px;
+            background-color: #2c3e50;
+            color: #fff;
+            border: 1px solid #444;
+            border-radius: 6px;
+            margin-right: 6px;
+        }
 
-        .order-btn-group { display: flex; flex-direction: column; gap: 2px; }
+        .order-btn-group {
+            flex-shrink: 0; /* 禁止壓縮 */
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+            width: 24px; /* 固定寬度，確保不會被擠出去 */
+        }
         .order-btn {
-            background: #333; color: #aaa; border-radius: 4px; padding: 2px 8px; font-size: 10px; height: 18px; line-height: 14px;
+            background: #333; color: #aaa; border-radius: 4px; padding: 0; font-size: 10px; height: 16px; line-height: 16px; width: 100%;
         }
         .order-btn:active { background: #555; color: white; }
 
+        /* --- 底部按鈕區 (關鍵修正) --- */
+        .bottom-action-area {
+            flex-shrink: 0; /* 禁止壓縮 */
+            padding: 15px;
+            background: #121212; /* 確保不透明 */
+            border-top: 1px solid #222; /* 選用，增加層次感 */
+        }
+
         .start-btn {
-            position: absolute; bottom: 30px; left: 20px; right: 20px;
+            width: 100%;
             padding: 16px;
             background: linear-gradient(135deg, #2ecc71, #27ae60);
             color: white; font-size: 20px; border-radius: 16px;
             box-shadow: 0 4px 15px rgba(46, 204, 113, 0.4);
-            z-index: 20;
         }
 
         /* --- 抽籤頁面 --- */
@@ -144,33 +227,10 @@
 
         /* --- 熱力圖 (Heatmap) --- */
         #stats-screen { flex: 1; display: flex; flex-direction: column; background: #121212; z-index: 10;}
-        .heatmap-container {
-            flex: 1;
-            padding: 20px;
-            overflow-y: auto;
-        }
-        .heatmap-grid {
-            display: grid;
-            /* 第一欄是科目名，後面7欄是日期 */
-            grid-template-columns: auto repeat(7, 1fr);
-            gap: 4px;
-            align-items: center;
-        }
-        .hm-cell {
-            width: 100%;
-            aspect-ratio: 1;
-            border-radius: 4px;
-            background-color: #1e1e1e; /* 預設無數據顏色 */
-        }
-        .hm-label-row {
-            font-size: 10px; color: #888; text-align: center; margin-bottom: 5px;
-        }
-        .hm-label-col {
-            font-size: 12px; color: #ccc; text-align: right; padding-right: 10px;
-            white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 80px;
-        }
-        
-        /* 熱力圖顏色等級 */
+        .heatmap-container { flex: 1; padding: 20px; overflow-y: auto; }
+        .heatmap-grid { display: grid; grid-template-columns: auto repeat(7, 1fr); gap: 4px; align-items: center; }
+        .hm-cell { width: 100%; aspect-ratio: 1; border-radius: 4px; background-color: #1e1e1e; }
+        .hm-label-col { font-size: 12px; color: #ccc; text-align: right; padding-right: 10px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 80px; }
         .lvl-0 { background-color: #252525; }
         .lvl-1 { background-color: #0e4429; }
         .lvl-2 { background-color: #006d32; }
@@ -186,24 +246,41 @@
     <div id="setup-screen">
         <div class="header-nav">
             <button id="sound-btn" class="icon-btn active" onclick="toggleSound()">🔊</button>
-            <h2>讀書計畫 V7</h2>
+            <h2>讀書計畫 V7.1</h2>
             <button class="icon-btn" onclick="showStats()">🔥 熱力圖</button>
         </div>
         
-        <div class="control-bar">
-            <div>
-                <div style="font-weight:bold; color:#ddd">不重複模式</div>
-                <div style="font-size:12px; color:#aaa;">讀完一科少一科</div>
+        <div class="controls-wrapper">
+            <div class="control-bar">
+                <div class="control-row">
+                    <div>
+                        <div style="font-weight:bold; color:#ddd; font-size:14px;">不重複模式</div>
+                        <div style="font-size:10px; color:#aaa;">讀完一科少一科</div>
+                    </div>
+                    <label class="switch-container">
+                        <input type="checkbox" id="deck-mode-toggle" onchange="playTone(800, 0.05, 'triangle')">
+                        <span class="slider"></span>
+                    </label>
+                </div>
+                <div class="control-row" style="border-bottom:none; margin-bottom:0; padding-bottom:0;">
+                    <div>
+                        <div style="font-weight:bold; color:#ddd; font-size:14px;">字體大小</div>
+                    </div>
+                    <div style="display:flex; align-items:center; gap:10px;">
+                        <span style="font-size:12px; color:#aaa;">A</span>
+                        <input type="range" min="12" max="24" value="16" class="font-slider" id="font-size-slider" oninput="updateFontSize(this.value)">
+                        <span style="font-size:18px; color:#aaa;">A</span>
+                    </div>
+                </div>
             </div>
-            <label class="switch-container">
-                <input type="checkbox" id="deck-mode-toggle" onchange="playTone(800, 0.05, 'triangle')">
-                <span class="slider"></span>
-            </label>
         </div>
         
         <div class="list-container" id="subject-list">
             </div>
-        <button class="start-btn" onclick="startSession()">🚀 開始執行</button>
+
+        <div class="bottom-action-area">
+            <button class="start-btn" onclick="startSession()">🚀 開始執行</button>
+        </div>
     </div>
 
     <div id="draw-screen" class="hidden">
@@ -216,26 +293,31 @@
 
     <div id="stats-screen" class="hidden">
         <div class="header-nav">
-            <h2>讀書熱力圖 (近7日)</h2>
+            <h2>讀書熱力圖</h2>
             <button class="icon-btn" onclick="closeStats()">✕</button>
         </div>
-        
         <div style="display:grid; grid-template-columns: auto repeat(7, 1fr); gap:4px; padding:10px 20px 0 20px; font-size:10px; color:#666; text-align:center;">
-            <div style="width:80px;"></div> <div id="date-headers" style="display:contents;"></div>
+            <div style="width:80px;"></div>
+            <div id="date-headers" style="display:contents;"></div>
         </div>
-
         <div class="heatmap-container">
-            <div id="heatmap-grid" class="heatmap-grid">
-                </div>
+            <div id="heatmap-grid" class="heatmap-grid"></div>
         </div>
-        
         <div style="text-align:center; padding:20px;">
             <button onclick="clearHistory()" style="color:#e74c3c; background:none; border:1px solid #e74c3c; padding:8px 20px; border-radius:20px;">清除紀錄</button>
         </div>
     </div>
 
     <script>
-        // --- 1. 彩帶特效 (Canvas Confetti) ---
+        // --- JS 功能區 ---
+        
+        // 字體調整
+        function updateFontSize(val) {
+            document.documentElement.style.setProperty('--list-font-size', val + 'px');
+            localStorage.setItem('studyApp_fontSize', val);
+        }
+
+        // --- 1. 彩帶特效 ---
         const canvas = document.getElementById('confetti-canvas');
         const ctx = canvas.getContext('2d');
         let particles = [];
@@ -252,7 +334,7 @@
             const colors = ['#e74c3c', '#3498db', '#f1c40f', '#2ecc71', '#9b59b6'];
             return {
                 x: Math.random() * canvas.width,
-                y: Math.random() * canvas.height - canvas.height, // 從上方開始
+                y: Math.random() * canvas.height - canvas.height, 
                 size: Math.random() * 8 + 4,
                 color: colors[Math.floor(Math.random() * colors.length)],
                 speedY: Math.random() * 3 + 2,
@@ -264,113 +346,61 @@
 
         function startConfetti() {
             particles = [];
-            for (let i = 0; i < 150; i++) {
-                particles.push(createParticle());
-            }
+            for (let i = 0; i < 150; i++) particles.push(createParticle());
             if (!animationId) loopConfetti();
         }
 
         function stopConfetti() {
-            if (animationId) {
-                cancelAnimationFrame(animationId);
-                animationId = null;
-            }
+            if (animationId) { cancelAnimationFrame(animationId); animationId = null; }
             ctx.clearRect(0, 0, canvas.width, canvas.height);
         }
 
         function loopConfetti() {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
             particles.forEach((p, index) => {
-                p.y += p.speedY;
-                p.x += p.speedX;
-                p.rotation += p.rotationSpeed;
-                
-                // 畫彩帶 (簡單矩形模擬)
-                ctx.save();
-                ctx.translate(p.x, p.y);
-                ctx.rotate(p.rotation * Math.PI / 180);
-                ctx.fillStyle = p.color;
-                ctx.fillRect(-p.size/2, -p.size/2, p.size, p.size);
+                p.y += p.speedY; p.x += p.speedX; p.rotation += p.rotationSpeed;
+                ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.rotation * Math.PI / 180);
+                ctx.fillStyle = p.color; ctx.fillRect(-p.size/2, -p.size/2, p.size, p.size);
                 ctx.restore();
-
-                // 重置超出螢幕的粒子
-                if (p.y > canvas.height) {
-                    particles[index] = createParticle(); // 循環落下
-                }
+                if (p.y > canvas.height) particles[index] = createParticle();
             });
             animationId = requestAnimationFrame(loopConfetti);
         }
+        function triggerCelebration() { startConfetti(); setTimeout(stopConfetti, 3000); }
 
-        // 停止特效定時器
-        function triggerCelebration() {
-            startConfetti();
-            setTimeout(stopConfetti, 3000); // 3秒後停止
-        }
-
-        // --- 2. 音效系統 (Web Audio API - 歡呼聲) ---
+        // --- 2. 音效 ---
         let audioCtx = null;
         let isMuted = false;
-
-        function initAudio() {
-            if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-        }
-
+        function initAudio() { if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)(); }
         function playTone(freq, duration, type = 'sine') {
             if (isMuted || !audioCtx) return;
             try {
-                const osc = audioCtx.createOscillator();
-                const gain = audioCtx.createGain();
-                osc.type = type;
-                osc.frequency.value = freq;
-                osc.connect(gain);
-                gain.connect(audioCtx.destination);
-                osc.start();
-                gain.gain.exponentialRampToValueAtTime(0.00001, audioCtx.currentTime + duration);
+                const osc = audioCtx.createOscillator(); const gain = audioCtx.createGain();
+                osc.type = type; osc.frequency.value = freq;
+                osc.connect(gain); gain.connect(audioCtx.destination);
+                osc.start(); gain.gain.exponentialRampToValueAtTime(0.00001, audioCtx.currentTime + duration);
                 osc.stop(audioCtx.currentTime + duration);
             } catch(e) {}
         }
-
-        // 模擬掌聲 (粉紅噪音 + 隨機)
         function playApplause() {
             if (isMuted || !audioCtx) return;
-            const duration = 2.0;
-            const bufferSize = audioCtx.sampleRate * duration;
+            const duration = 2.0; const bufferSize = audioCtx.sampleRate * duration;
             const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
             const data = buffer.getChannelData(0);
-            
-            for (let i = 0; i < bufferSize; i++) {
-                data[i] = (Math.random() * 2 - 1) * Math.exp(-i / (audioCtx.sampleRate * 0.5)); // 衰減
-            }
-
-            const noise = audioCtx.createBufferSource();
-            noise.buffer = buffer;
-            const gain = audioCtx.createGain();
-            // 讓聲音像人群
-            const filter = audioCtx.createBiquadFilter();
-            filter.type = 'lowpass';
-            filter.frequency.value = 1000;
-
-            noise.connect(filter);
-            filter.connect(gain);
-            gain.connect(audioCtx.destination);
-            
+            for (let i = 0; i < bufferSize; i++) data[i] = (Math.random() * 2 - 1) * Math.exp(-i / (audioCtx.sampleRate * 0.5));
+            const noise = audioCtx.createBufferSource(); noise.buffer = buffer;
+            const gain = audioCtx.createGain(); const filter = audioCtx.createBiquadFilter();
+            filter.type = 'lowpass'; filter.frequency.value = 1000;
+            noise.connect(filter); filter.connect(gain); gain.connect(audioCtx.destination);
             gain.gain.setValueAtTime(0.5, audioCtx.currentTime);
             gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
-            
             noise.start();
         }
-
         function playCheer() {
             initAudio();
-            // 1. 勝利號角
-            playTone(523.25, 0.2, 'triangle'); // Do
-            setTimeout(() => playTone(659.25, 0.2, 'triangle'), 150); // Mi
-            setTimeout(() => playTone(783.99, 0.4, 'square'), 300); // Sol (強烈)
-            
-            // 2. 掌聲
-            setTimeout(playApplause, 300);
+            playTone(523.25, 0.2, 'triangle'); setTimeout(() => playTone(659.25, 0.2, 'triangle'), 150);
+            setTimeout(() => playTone(783.99, 0.4, 'square'), 300); setTimeout(playApplause, 300);
         }
-
         function toggleSound() {
             isMuted = !isMuted;
             document.getElementById('sound-btn').innerHTML = isMuted ? '🔇' : '🔊';
@@ -379,46 +409,44 @@
         }
 
         // --- 3. 核心邏輯 ---
-        
-        // 預設資料 + 5個自訂科目
         let defaultSubjects = [
             { name: "數學", weight: 5 }, { name: "物理", weight: 5 },
             { name: "化學", weight: 4 }, { name: "生物", weight: 3 },
             { name: "英文", weight: 3 }, { name: "國文", weight: 2 },
             { name: "地科", weight: 2 }, { name: "程式", weight: 4 },
             { name: "專題", weight: 3 },
-            { name: "自訂科目 1", weight: 1 }, { name: "自訂科目 2", weight: 1 },
-            { name: "自訂科目 3", weight: 1 }, { name: "自訂科目 4", weight: 1 },
-            { name: "自訂科目 5", weight: 1 }
+            { name: "自訂1", weight: 1 }, { name: "自訂2", weight: 1 },
+            { name: "自訂3", weight: 1 }, { name: "自訂4", weight: 1 },
+            { name: "自訂5", weight: 1 }
         ];
 
-        let activePool = [];
-        let currentDeck = [];
-        let isDeckMode = false;
+        let activePool = []; let currentDeck = []; let isDeckMode = false;
 
         window.addEventListener('load', () => {
             document.body.addEventListener('click', () => initAudio(), { once: true });
             try { loadSettings(); } catch (e) { localStorage.removeItem('studyApp_data'); }
             renderSetupList();
+            
+            // 讀取字體設定
+            const savedFont = localStorage.getItem('studyApp_fontSize');
+            if(savedFont) {
+                document.documentElement.style.setProperty('--list-font-size', savedFont + 'px');
+                document.getElementById('font-size-slider').value = savedFont;
+            }
         });
 
         function renderSetupList() {
             const container = document.getElementById('subject-list');
             if (!container) return;
             container.innerHTML = '';
-            
             defaultSubjects.forEach((sub, index) => {
                 const row = document.createElement('div');
                 row.className = 'subject-row';
                 const isChecked = sub.checked !== false;
-                
-                // 注意：這裡將科目名稱改成 <input>
                 row.innerHTML = `
                     <input type="checkbox" class="sub-check" id="chk-${index}" ${isChecked ? 'checked' : ''} onchange="playTone(800, 0.05, 'triangle')">
                     <input type="text" class="name-input" value="${sub.name}" id="name-${index}" onchange="updateName(${index}, this.value)">
-                    <input type="number" id="w-${index}" class="weight-input" 
-                           value="${sub.weight}" min="1" max="9" inputmode="numeric" onfocus="this.select()">
-                    
+                    <input type="number" id="w-${index}" class="weight-input" value="${sub.weight}" min="1" max="9" inputmode="numeric" onfocus="this.select()">
                     <div class="order-btn-group">
                         <button class="order-btn" onclick="moveItem(${index}, -1)">▲</button>
                         <button class="order-btn" onclick="moveItem(${index}, 1)">▼</button>
@@ -426,18 +454,13 @@
                 `;
                 container.appendChild(row);
             });
-            
             try {
                 const storedMode = localStorage.getItem('studyApp_deckMode');
                 if(storedMode === 'true') document.getElementById('deck-mode-toggle').checked = true;
             } catch(e) {}
         }
 
-        function updateName(index, newName) {
-            defaultSubjects[index].name = newName;
-            saveSettings();
-        }
-
+        function updateName(index, newName) { defaultSubjects[index].name = newName; saveSettings(); }
         function moveItem(index, direction) {
             playTone(800, 0.05, 'triangle');
             const newIndex = index + direction;
@@ -454,10 +477,9 @@
                 const weightInput = document.getElementById(`w-${index}`);
                 const nameInput = document.getElementById(`name-${index}`);
                 let val = parseInt(weightInput.value) || 1;
-                
                 defaultSubjects[index].checked = chk.checked;
                 defaultSubjects[index].weight = val;
-                defaultSubjects[index].name = nameInput.value; // 確保名稱也被同步
+                defaultSubjects[index].name = nameInput.value;
             });
         }
 
@@ -468,10 +490,8 @@
                 activePool = defaultSubjects.filter(s => s.checked).map(s => ({name: s.name, weight: s.weight}));
                 if (activePool.length < 1) { alert("請至少勾選 1 個科目！"); return; }
                 saveSettings();
-
                 const toggle = document.getElementById('deck-mode-toggle');
                 isDeckMode = toggle ? toggle.checked : false;
-
                 if (isDeckMode) {
                     currentDeck = JSON.parse(JSON.stringify(activePool));
                     document.getElementById('deck-status').classList.remove('hidden');
@@ -485,22 +505,16 @@
         }
 
         function draw() {
-            // Android震動 + iOS視覺震動
             if (navigator.vibrate) navigator.vibrate(30); 
-
             let pool = isDeckMode ? currentDeck : activePool;
             if (pool.length === 0) { alert("所有科目都讀完了！"); return; }
-
             const resultDisplay = document.getElementById('result-display');
             let counter = 0;
             let shuffle = setInterval(() => {
                 resultDisplay.innerText = pool[Math.floor(Math.random() * pool.length)].name;
-                playTone(200 + counter*50, 0.03, 'square'); // 跑馬燈音效
+                playTone(200 + counter*50, 0.03, 'square');
                 counter++;
-                if(counter > 10) {
-                    clearInterval(shuffle);
-                    finalizeDraw(pool);
-                }
+                if(counter > 10) { clearInterval(shuffle); finalizeDraw(pool); }
             }, 50);
         }
 
@@ -508,26 +522,21 @@
             const totalWeight = pool.reduce((sum, item) => sum + item.weight, 0);
             let randomNum = Math.random() * totalWeight;
             let selectedIndex = -1, selectedItem = null;
-
             for (let i = 0; i < pool.length; i++) {
                 randomNum -= pool[i].weight;
                 if (randomNum < 0) { selectedItem = pool[i]; selectedIndex = i; break; }
             }
-
             if(selectedItem) {
                 showResult(selectedItem, totalWeight);
                 recordHistory(selectedItem.name);
-                playCheer();       // 播放歡呼
-                triggerCelebration(); // 播放彩帶
+                playCheer(); triggerCelebration();
             }
-
             if (isDeckMode) {
                 currentDeck.splice(selectedIndex, 1);
                 updateDeckStatus();
                 if (currentDeck.length === 0) {
                     const btn = document.getElementById('draw-btn');
-                    btn.innerText = "全部完成";
-                    btn.disabled = true;
+                    btn.innerText = "全部完成"; btn.disabled = true;
                     document.getElementById('prob-display').innerText = "本輪結束";
                 }
             }
@@ -538,7 +547,6 @@
             resDisplay.innerText = item.name;
             const isScience = ['數學', '物理', '化學', '程式'].includes(item.name);
             resDisplay.style.color = isScience ? "#e74c3c" : "#3498db";
-
             if (!isDeckMode) {
                 const prob = ((item.weight / totalW) * 100).toFixed(1);
                 document.getElementById('prob-display').innerText = `機率: ${prob}%`;
@@ -547,12 +555,10 @@
             }
         }
 
-        // --- 熱力圖系統 ---
         function recordHistory(subjectName) {
             try {
                 let history = JSON.parse(localStorage.getItem('study_history') || '[]');
                 history.push({ sub: subjectName, time: Date.now() });
-                // 只保留30天資料以免熱力圖爆掉
                 const daysLimit = Date.now() - 30 * 24 * 60 * 60 * 1000;
                 history = history.filter(h => h.time > daysLimit);
                 localStorage.setItem('study_history', JSON.stringify(history));
@@ -568,103 +574,51 @@
         function renderHeatmap() {
             const grid = document.getElementById('heatmap-grid');
             const headerRow = document.getElementById('date-headers');
-            grid.innerHTML = '';
-            headerRow.innerHTML = '';
-
+            grid.innerHTML = ''; headerRow.innerHTML = '';
             let history = [];
             try { history = JSON.parse(localStorage.getItem('study_history') || '[]'); } catch(e){}
-
-            // 1. 準備日期 (X軸) - 過去6天 + 今天
             const dates = [];
             for(let i=6; i>=0; i--) {
-                const d = new Date();
-                d.setDate(d.getDate() - i);
+                const d = new Date(); d.setDate(d.getDate() - i);
                 const dateStr = `${d.getMonth()+1}/${d.getDate()}`;
                 dates.push({ str: dateStr, obj: d });
-                
-                // 渲染標頭
-                const th = document.createElement('div');
-                th.innerText = dateStr;
-                headerRow.appendChild(th);
+                const th = document.createElement('div'); th.innerText = dateStr; headerRow.appendChild(th);
             }
-
-            // 2. 準備科目 (Y軸) - 只顯示有勾選或有歷史紀錄的
-            const activeSubNames = defaultSubjects.map(s => s.name); // 顯示所有列表中的科目
-            
-            // 3. 統計數據
-            // map: counts[subjectName][dateIndex 0-6] = count
+            const activeSubNames = defaultSubjects.map(s => s.name);
             const dataMap = {};
-            activeSubNames.forEach(name => {
-                dataMap[name] = [0, 0, 0, 0, 0, 0, 0];
-            });
-
+            activeSubNames.forEach(name => { dataMap[name] = [0, 0, 0, 0, 0, 0, 0]; });
             history.forEach(h => {
                 const hDate = new Date(h.time);
-                // 檢查這筆紀錄是否在最近7天內
-                // 簡單比對: 跟 dates 陣列裡的日期比對
-                const idx = dates.findIndex(d => 
-                    d.obj.getDate() === hDate.getDate() && 
-                    d.obj.getMonth() === hDate.getMonth()
-                );
-                if(idx !== -1 && dataMap[h.sub]) {
-                    dataMap[h.sub][idx]++;
-                }
+                const idx = dates.findIndex(d => d.obj.getDate() === hDate.getDate() && d.obj.getMonth() === hDate.getMonth());
+                if(idx !== -1 && dataMap[h.sub]) dataMap[h.sub][idx]++;
             });
-
-            // 4. 繪製 Grid
             activeSubNames.forEach(subName => {
-                // 科目名稱欄
-                const label = document.createElement('div');
-                label.className = 'hm-label-col';
-                label.innerText = subName;
-                grid.appendChild(label);
-
-                // 7個格子的數據
-                const counts = dataMap[subName];
-                counts.forEach(count => {
-                    const cell = document.createElement('div');
-                    cell.className = 'hm-cell';
-                    
-                    // 決定顏色等級
+                const label = document.createElement('div'); label.className = 'hm-label-col'; label.innerText = subName; grid.appendChild(label);
+                dataMap[subName].forEach(count => {
+                    const cell = document.createElement('div'); cell.className = 'hm-cell';
                     if(count > 0) cell.classList.add('lvl-1');
                     if(count > 1) cell.classList.remove('lvl-1'), cell.classList.add('lvl-2');
                     if(count > 3) cell.classList.remove('lvl-2'), cell.classList.add('lvl-3');
                     if(count > 5) cell.classList.remove('lvl-3'), cell.classList.add('lvl-4');
-                    
-                    cell.title = `${subName}: ${count}次`;
                     grid.appendChild(cell);
                 });
             });
         }
 
-        function clearHistory() {
-            if(confirm("確定要清除統計紀錄嗎？")) {
-                localStorage.removeItem('study_history');
-                renderHeatmap();
-            }
-        }
-
-        // --- 輔助 ---
+        function clearHistory() { if(confirm("確定要清除統計紀錄嗎？")) { localStorage.removeItem('study_history'); renderHeatmap(); } }
         function switchScreen(screenId) {
             ['setup-screen', 'draw-screen', 'stats-screen'].forEach(id => {
-                const el = document.getElementById(id);
-                if(el) el.classList.toggle('hidden', id !== screenId);
+                const el = document.getElementById(id); if(el) el.classList.toggle('hidden', id !== screenId);
             });
         }
         function closeStats() { playTone(800, 0.05, 'triangle'); switchScreen('setup-screen'); }
-        function goBack() { 
-            stopConfetti(); // 離開時停止彩帶
-            playTone(800, 0.05, 'triangle'); 
-            switchScreen('setup-screen'); 
-        }
+        function goBack() { stopConfetti(); playTone(800, 0.05, 'triangle'); switchScreen('setup-screen'); }
         function updateDeckStatus() { document.getElementById('deck-status').innerText = `剩餘: ${currentDeck.length}`; }
         function resetDrawScreen() {
             document.getElementById('result-display').innerText = "準備";
             document.getElementById('result-display').style.color = "#fff";
             document.getElementById('prob-display').innerText = "點擊開始";
-            const btn = document.getElementById('draw-btn');
-            btn.disabled = false;
-            btn.innerText = "抽選";
+            const btn = document.getElementById('draw-btn'); btn.disabled = false; btn.innerText = "抽選";
         }
         function saveSettings() {
             try {
