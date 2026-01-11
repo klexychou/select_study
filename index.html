@@ -21,7 +21,7 @@
             overflow: hidden;
             display: flex;
             flex-direction: column;
-            padding-top: env(safe-area-inset-top); /* 避開瀏海 */
+            padding-top: env(safe-area-inset-top);
             padding-bottom: env(safe-area-inset-bottom);
         }
 
@@ -37,7 +37,7 @@
         }
         button:active { transform: scale(0.96); }
 
-        /* --- 共用標題列 --- */
+        /* --- 標題列 --- */
         .header-nav {
             padding: 15px 20px;
             display: flex;
@@ -49,9 +49,11 @@
         h2 { margin: 0; color: #3498db; font-size: 20px; }
         .icon-btn {
             background: none;
-            font-size: 24px;
-            padding: 5px;
+            font-size: 16px;
+            padding: 5px 10px;
             color: #aaa;
+            border: 1px solid #444;
+            border-radius: 15px;
         }
 
         /* --- 1. 設定頁面 --- */
@@ -114,7 +116,7 @@
             align-items: center;
             background-color: #1e1e1e;
             margin-bottom: 10px;
-            padding: 12px 15px;
+            padding: 10px 15px;
             border-radius: 10px;
             border: 1px solid #333;
         }
@@ -125,7 +127,25 @@
             accent-color: #3498db; 
         }
 
-        .subject-name { flex: 1; font-size: 18px; }
+        /* 科目名稱顯示 */
+        .subject-name { flex: 1; font-size: 18px; color: #ddd; }
+        
+        /* 自訂科目輸入框樣式 */
+        .custom-name-input {
+            flex: 1;
+            background: transparent;
+            border: none;
+            border-bottom: 1px dashed #555;
+            color: #4cd137; /* 自訂科目用綠色顯示 */
+            font-size: 18px;
+            padding: 5px 0;
+            font-family: inherit;
+            margin-right: 10px;
+        }
+        .custom-name-input:focus {
+            outline: none;
+            border-bottom: 1px solid #4cd137;
+        }
 
         .weight-input {
             width: 45px;
@@ -136,6 +156,7 @@
             color: #fff;
             border: 1px solid #444;
             border-radius: 8px;
+            margin-left: 10px;
         }
 
         .start-btn {
@@ -177,6 +198,7 @@
             margin-bottom: 10px;
             text-align: center;
             padding: 0 20px;
+            word-break: break-word; /* 防止長名字跑版 */
         }
 
         #prob-display {
@@ -208,7 +230,7 @@
             padding: 10px 20px;
         }
 
-        /* --- 3. 統計頁面 (CSS Bar Chart) --- */
+        /* --- 3. 統計頁面 --- */
         #stats-screen {
             flex: 1;
             display: flex;
@@ -231,20 +253,16 @@
             height: 300px;
             border-bottom: 2px solid #555;
             padding-bottom: 5px;
+            overflow-x: auto; /* 允許橫向滑動 */
         }
         .bar-col {
-            flex: 1;
+            flex: 0 0 40px; /* 固定寬度避免太擠 */
             display: flex;
             flex-direction: column;
             align-items: center;
-            margin: 0 4px;
-            max-width: 40px;
+            margin: 0 5px;
         }
-        .bar-val {
-            font-size: 12px;
-            color: #aaa;
-            margin-bottom: 4px;
-        }
+        .bar-val { font-size: 10px; color: #aaa; margin-bottom: 4px; }
         .bar {
             width: 100%;
             background: #3498db;
@@ -252,21 +270,15 @@
             transition: height 0.6s ease-out;
             min-height: 2px;
         }
-        .bar.highlight { background: #e74c3c; } /* 理科紅色 */
-        
+        .bar.highlight { background: #e74c3c; }
         .bar-label {
             margin-top: 8px;
-            font-size: 12px;
+            font-size: 10px;
             color: #ccc;
-            writing-mode: vertical-rl; /* 直書避免擁擠 */
+            writing-mode: vertical-rl;
             text-orientation: mixed;
             max-height: 80px;
-        }
-        .stats-info {
-            text-align: center;
-            color: #888;
-            font-size: 12px;
-            margin-top: 10px;
+            overflow: hidden;
         }
     </style>
 </head>
@@ -274,7 +286,7 @@
 
     <div id="setup-screen">
         <div class="header-nav">
-            <h2>讀書計畫</h2>
+            <h2>讀書計畫 V5</h2>
             <button class="icon-btn" onclick="showStats()">📊 統計</button>
         </div>
         
@@ -307,9 +319,8 @@
             <button class="icon-btn" onclick="closeStats()">✕ 關閉</button>
         </div>
         <div class="chart-wrapper">
-            <div id="chart-area" class="chart-container">
-                </div>
-            <div class="stats-info">僅顯示過去 7 天的數據</div>
+            <div id="chart-area" class="chart-container"></div>
+            <div style="text-align:center; margin-top:10px; color:#666; font-size:12px;">僅顯示過去 7 天數據</div>
         </div>
         <div style="text-align:center; padding:20px;">
             <button onclick="clearHistory()" style="color:#e74c3c; background:none; border:1px solid #e74c3c; padding:8px 20px; font-size:14px; border-radius:20px;">清除紀錄</button>
@@ -318,12 +329,21 @@
 
     <script>
         // --- 變數與設定 ---
+        // 擴增到 12 個科目
+        // isCustom: true 代表這個欄位是輸入框
         const defaultSubjects = [
-            { name: "數學", weight: 5 }, { name: "物理", weight: 5 },
-            { name: "化學", weight: 4 }, { name: "生物", weight: 3 },
-            { name: "英文", weight: 3 }, { name: "國文", weight: 2 },
-            { name: "地科", weight: 2 }, { name: "程式", weight: 4 },
-            { name: "專題", weight: 3 }
+            { name: "數學", weight: 5, isCustom: false },
+            { name: "物理", weight: 5, isCustom: false },
+            { name: "化學", weight: 4, isCustom: false },
+            { name: "生物", weight: 3, isCustom: false },
+            { name: "英文", weight: 3, isCustom: false },
+            { name: "國文", weight: 2, isCustom: false },
+            { name: "地科", weight: 2, isCustom: false },
+            { name: "程式", weight: 4, isCustom: true },  // ID 7: 預設程式，但可改
+            { name: "專題", weight: 3, isCustom: true },  // ID 8: 預設專題，但可改
+            { name: "自訂1", weight: 1, isCustom: true },  // ID 9
+            { name: "自訂2", weight: 1, isCustom: true },  // ID 10
+            { name: "自訂3", weight: 1, isCustom: true }   // ID 11
         ];
 
         let activePool = [];
@@ -340,18 +360,31 @@
         function renderSetupList() {
             const container = document.getElementById('subject-list');
             container.innerHTML = '';
+            
             defaultSubjects.forEach((sub, index) => {
                 const row = document.createElement('div');
                 row.className = 'subject-row';
                 const isChecked = sub.checked !== false;
+
+                // 判斷是「固定文字」還是「輸入框」
+                let nameHtml = '';
+                if (sub.isCustom) {
+                    // 自訂科目顯示輸入框
+                    nameHtml = `<input type="text" id="name-${index}" class="custom-name-input" value="${sub.name}" placeholder="輸入名稱">`;
+                } else {
+                    // 固定科目顯示文字
+                    nameHtml = `<label for="chk-${index}" class="subject-name">${sub.name}</label>`;
+                }
+
                 row.innerHTML = `
                     <input type="checkbox" class="sub-check" id="chk-${index}" ${isChecked ? 'checked' : ''}>
-                    <label for="chk-${index}" class="subject-name">${sub.name}</label>
+                    ${nameHtml}
                     <input type="number" id="w-${index}" class="weight-input" 
                            value="${sub.weight}" min="1" max="9" inputmode="numeric">
                 `;
                 container.appendChild(row);
             });
+
             try {
                 const storedMode = localStorage.getItem('studyApp_deckMode');
                 if(storedMode === 'true') document.getElementById('deck-mode-toggle').checked = true;
@@ -362,15 +395,25 @@
             try {
                 activePool = [];
                 const checkboxes = document.querySelectorAll('#subject-list .sub-check');
+                
                 checkboxes.forEach((chk, index) => {
                     const weightInput = document.getElementById(`w-${index}`);
                     let val = parseInt(weightInput.value) || 1;
                     if (val > 9) val = 9; if (val < 1) val = 1;
 
+                    // 儲存權重與勾選狀態
                     defaultSubjects[index].checked = chk.checked;
                     defaultSubjects[index].weight = val;
 
-                    if (chk.checked) activePool.push({ name: defaultSubjects[index].name, weight: val });
+                    // ⭐️ 關鍵：如果有輸入框，也要儲存使用者改的名字
+                    const nameInput = document.getElementById(`name-${index}`);
+                    if (nameInput) {
+                        defaultSubjects[index].name = nameInput.value;
+                    }
+
+                    if (chk.checked) {
+                        activePool.push({ name: defaultSubjects[index].name, weight: val });
+                    }
                 });
 
                 if (activePool.length < 1) { alert("請至少勾選 1 個科目！"); return; }
@@ -406,7 +449,7 @@
 
             if(selectedItem) {
                 showResult(selectedItem, totalWeight);
-                recordHistory(selectedItem.name); // 寫入歷史紀錄
+                recordHistory(selectedItem.name); 
             }
 
             if (isDeckMode) {
@@ -424,7 +467,8 @@
         function showResult(item, totalW) {
             const resDisplay = document.getElementById('result-display');
             resDisplay.innerText = item.name;
-            const isScience = ['數學', '物理', '化學', '程式'].includes(item.name);
+            // 簡單判斷：包含 數/理/化/程/生 顯示紅色，其他藍色
+            const isScience = /[數理化程生]/.test(item.name) || /Math|Phys|Chem|Code|Bio/i.test(item.name);
             resDisplay.style.color = isScience ? "#e74c3c" : "#3498db";
 
             if (!isDeckMode) {
@@ -435,19 +479,15 @@
             }
         }
 
-        // --- 歷史紀錄與統計系統 ---
+        // --- 歷史紀錄與統計 ---
         function recordHistory(subjectName) {
             try {
-                // 1. 讀取舊紀錄
                 let history = JSON.parse(localStorage.getItem('study_history') || '[]');
-                // 2. 加入新紀錄 (包含時間戳記)
                 history.push({ sub: subjectName, time: Date.now() });
-                // 3. 只保留 7 天內的資料
                 const sevenDaysAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
                 history = history.filter(h => h.time > sevenDaysAgo);
-                // 4. 存回去
                 localStorage.setItem('study_history', JSON.stringify(history));
-            } catch(e) { console.log("無法寫入紀錄"); }
+            } catch(e) {}
         }
 
         function showStats() {
@@ -457,7 +497,7 @@
 
         function renderChart() {
             const chartArea = document.getElementById('chart-area');
-            chartArea.innerHTML = ''; // 清空
+            chartArea.innerHTML = ''; 
 
             let history = [];
             try { history = JSON.parse(localStorage.getItem('study_history') || '[]'); } catch(e){}
@@ -467,23 +507,15 @@
                 return;
             }
 
-            // 統計每個科目的次數
             const counts = {};
-            history.forEach(h => {
-                counts[h.sub] = (counts[h.sub] || 0) + 1;
-            });
-
-            // 找出最大值 (為了計算長條圖高度比例)
+            history.forEach(h => { counts[h.sub] = (counts[h.sub] || 0) + 1; });
             const maxCount = Math.max(...Object.values(counts));
-
-            // 產生圖表 HTML
-            // 為了讓圖表好看，我們只顯示有數據的，或者顯示預設科目
             const subjectsToShow = Object.keys(counts).length > 0 ? Object.keys(counts) : [];
 
             subjectsToShow.forEach(sub => {
                 const count = counts[sub] || 0;
                 const heightPercent = (count / maxCount) * 100;
-                const isScience = ['數學', '物理', '化學', '程式'].includes(sub);
+                const isScience = /[數理化程生]/.test(sub);
                 
                 const col = document.createElement('div');
                 col.className = 'bar-col';
@@ -511,20 +543,15 @@
                 else el.classList.add('hidden');
             });
         }
-
         function closeStats() { switchScreen('setup-screen'); }
         function goBack() { switchScreen('setup-screen'); }
-        
-        function updateDeckStatus() {
-            document.getElementById('deck-status').innerText = `剩餘: ${currentDeck.length}`;
-        }
+        function updateDeckStatus() { document.getElementById('deck-status').innerText = `剩餘: ${currentDeck.length}`; }
         function resetDrawScreen() {
             document.getElementById('result-display').innerText = "準備";
             document.getElementById('result-display').style.color = "#fff";
             document.getElementById('prob-display').innerText = "點擊開始";
             const btn = document.getElementById('draw-btn');
-            btn.disabled = false;
-            btn.innerText = "抽選";
+            btn.disabled = false; btn.innerText = "抽選";
         }
         function saveSettings() {
             try {
@@ -539,7 +566,12 @@
             if (saved) {
                 const parsed = JSON.parse(saved);
                 parsed.forEach((s, i) => { 
-                    if(defaultSubjects[i]) { defaultSubjects[i].weight = s.weight; defaultSubjects[i].checked = s.checked; }
+                    if(defaultSubjects[i]) { 
+                        defaultSubjects[i].weight = s.weight; 
+                        defaultSubjects[i].checked = s.checked;
+                        // 也要讀取名稱
+                        if (s.name) defaultSubjects[i].name = s.name;
+                    }
                 });
             }
         }
