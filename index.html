@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>抽抽樂 V9.0</title>
+    <title>抽抽樂 V9.1</title>
     
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -81,7 +81,22 @@
         
         #result-display { font-size: 56px; font-weight: 800; color: #3498db; margin-bottom: 20px; text-align: center; padding: 0 20px; line-height: 1.2; text-shadow: 0 0 30px rgba(255,255,255,0.1); }
         
-        /* 番茄鐘區塊 */
+        /* 抽籤按鈕 (修復重點) */
+        #draw-btn-container { margin-bottom: 30px; }
+        .draw-action-btn { 
+            padding: 20px 80px; font-size: 28px; 
+            background: linear-gradient(135deg, #3498db, #2980b9); 
+            color: white; border-radius: 50px; 
+            box-shadow: 0 10px 25px rgba(52, 152, 219, 0.4);
+            animation: pulse 2s infinite;
+        }
+        @keyframes pulse {
+            0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(52, 152, 219, 0.7); }
+            70% { transform: scale(1.05); box-shadow: 0 0 0 15px rgba(52, 152, 219, 0); }
+            100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(52, 152, 219, 0); }
+        }
+
+        /* 番茄鐘區塊 (預設隱藏) */
         .timer-container {
             background: #252525; padding: 20px; border-radius: 20px; text-align: center; border: 1px solid #444; margin-bottom: 30px; width: 260px;
         }
@@ -107,10 +122,10 @@
         .hm-label-col { font-size: 12px; color: #ccc; text-align: right; padding-right: 10px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 80px; }
         
         /* 熱力圖顏色 - 以時間為準 */
-        .lvl-1 { background-color: #0e4429; } /* 1-29 min */
-        .lvl-2 { background-color: #006d32; } /* 30-59 min */
-        .lvl-3 { background-color: #26a641; } /* 60-119 min */
-        .lvl-4 { background-color: #39d353; box-shadow: 0 0 5px #39d353; } /* 120+ min */
+        .lvl-1 { background-color: #0e4429; } 
+        .lvl-2 { background-color: #006d32; } 
+        .lvl-3 { background-color: #26a641; } 
+        .lvl-4 { background-color: #39d353; box-shadow: 0 0 5px #39d353; }
     </style>
 </head>
 <body>
@@ -120,7 +135,7 @@
     <div id="setup-screen">
         <div class="header-nav">
             <button id="sound-btn" class="icon-btn active" onclick="toggleSound()">🔊</button>
-            <h2>讀書抽抽樂 V9.0</h2>
+            <h2>讀書抽抽樂 V9.1</h2>
             <button class="icon-btn" onclick="showStats()">🔥 熱力圖</button>
         </div>
         
@@ -152,7 +167,11 @@
         <div id="deck-status" class="hidden"></div>
         <div id="result-display">?</div>
         
-        <div class="timer-container" id="timer-box">
+        <div id="draw-btn-container">
+            <button id="draw-btn" class="draw-action-btn" onclick="draw()">🎲 抽選</button>
+        </div>
+
+        <div class="timer-container hidden" id="timer-box">
             <div class="timer-adjust-row">
                 <button class="adj-btn" onclick="adjustTimerSetting(-5)">−</button>
                 <div id="timer-display">25:00</div>
@@ -206,25 +225,23 @@
             localStorage.setItem('studyApp_fontSize', currentFontSize);
         }
 
-        // --- 2. 番茄鐘邏輯 (升級版) ---
+        // --- 2. 番茄鐘邏輯 ---
         let timerInterval = null;
-        let defaultDuration = 25; // 預設分鐘
+        let defaultDuration = 25; 
         let timerSeconds = 25 * 60;
         let isTimerRunning = false;
         let timerEndTime = null;
-        let currentSubject = null; // 紀錄當前科目，用於統計
+        let currentSubject = null; 
 
         function adjustTimerSetting(delta) {
-            if(isTimerRunning) return; // 執行中不能改
+            if(isTimerRunning) return;
             playTone(800, 0.05, 'triangle');
             defaultDuration += delta;
-            if(defaultDuration < 5) defaultDuration = 5; // 最少5分鐘
-            if(defaultDuration > 120) defaultDuration = 120; // 最多120分鐘
+            if(defaultDuration < 5) defaultDuration = 5;
+            if(defaultDuration > 120) defaultDuration = 120;
             
             timerSeconds = defaultDuration * 60;
             updateTimerDisplay();
-            
-            // 記住使用者的偏好
             localStorage.setItem('studyApp_timerPref', defaultDuration);
         }
 
@@ -239,13 +256,11 @@
             const btn = document.getElementById('timer-toggle-btn');
             
             if (isTimerRunning) {
-                // 暫停
                 clearInterval(timerInterval);
                 isTimerRunning = false;
                 btn.innerText = "▶ 繼續";
                 btn.style.background = "#27ae60";
             } else {
-                // 開始
                 if ("Notification" in window && Notification.permission !== "granted") {
                     Notification.requestPermission();
                 }
@@ -275,7 +290,6 @@
             playTone(800, 0.05, 'triangle');
             clearInterval(timerInterval);
             isTimerRunning = false;
-            // 恢復設定的分鐘數
             timerSeconds = defaultDuration * 60;
             updateTimerDisplay();
             const btn = document.getElementById('timer-toggle-btn');
@@ -288,9 +302,8 @@
             isTimerRunning = false;
             playCheer();
             
-            // --- 關鍵修改：計時完成才紀錄 ---
             if(currentSubject) {
-                recordHistory(currentSubject.name, defaultDuration); // 傳入分鐘數
+                recordHistory(currentSubject.name, defaultDuration);
             }
 
             if ("Notification" in window && Notification.permission === "granted") {
@@ -385,8 +398,7 @@
             { name: "地科", weight: 2, color: "#2ecc71" }, 
             { name: "程式", weight: 4, color: "#3498db" },
             { name: "專題", weight: 3, color: "#9b59b6" },
-            { name: "自訂1", weight: 1, color: "#95a5a6" },
-            { name: "自訂2", weight: 1, color: "#95a5a6" }
+            { name: "自訂1", weight: 1, color: "#95a5a6" }
         ];
 
         let activePool = []; let currentDeck = []; let isDeckMode = false;
@@ -498,6 +510,11 @@
             let pool = isDeckMode ? currentDeck : activePool;
             if (pool.length === 0) { alert("所有科目都讀完了！"); return; }
             const resultDisplay = document.getElementById('result-display');
+            
+            // 隱藏抽籤按鈕，顯示抽籤中...
+            const drawBtnContainer = document.getElementById('draw-btn-container');
+            if(drawBtnContainer) drawBtnContainer.classList.add('hidden');
+
             let counter = 0;
             let shuffle = setInterval(() => {
                 const tempItem = pool[Math.floor(Math.random() * pool.length)];
@@ -518,21 +535,14 @@
                 if (randomNum < 0) { selectedItem = pool[i]; selectedIndex = i; break; }
             }
             if(selectedItem) {
-                currentSubject = selectedItem; // 存起來給番茄鐘用
+                currentSubject = selectedItem;
                 showResult(selectedItem);
-                
-                // 注意：這裡先不 recordHistory，等倒數完才記
-                
-                // 但為了慶祝，還是先放彩帶
                 triggerCelebration(selectedItem.color);
             }
             if (isDeckMode) {
                 currentDeck.splice(selectedIndex, 1);
                 updateDeckStatus();
-                if (currentDeck.length === 0) {
-                    const btn = document.getElementById('draw-btn');
-                    if(btn) { btn.innerText = "全部完成"; btn.disabled = true; }
-                }
+                // 若不重複模式下，不讓按鈕回來，除非重置
             }
         }
 
@@ -541,16 +551,20 @@
             resDisplay.innerText = item.name;
             resDisplay.style.color = item.color;
             resetTimer(); 
+            
+            // 顯示番茄鐘
+            document.getElementById('timer-box').classList.remove('hidden');
+            
+            // 如果不是不重複模式，可以考慮顯示「重抽」按鈕 (目前先不顯示，讓介面乾淨)
         }
 
-        // --- 紀錄歷史：新增 duration 參數 ---
         function recordHistory(subjectName, durationMin) {
             try {
                 let history = JSON.parse(localStorage.getItem('study_history') || '[]');
                 history.push({ 
                     sub: subjectName, 
                     time: Date.now(),
-                    duration: durationMin || 0 // 紀錄讀了多久
+                    duration: durationMin || 0 
                 });
                 const daysLimit = Date.now() - 30 * 24 * 60 * 60 * 1000;
                 history = history.filter(h => h.time > daysLimit);
@@ -564,7 +578,6 @@
             renderHeatmap();
         }
 
-        // --- 熱力圖 (改為時間制) ---
         function renderHeatmap() {
             const grid = document.getElementById('heatmap-grid');
             const headerRow = document.getElementById('date-headers');
@@ -586,8 +599,6 @@
                 const hDate = new Date(h.time);
                 const idx = dates.findIndex(d => d.obj.getDate() === hDate.getDate() && d.obj.getMonth() === hDate.getMonth());
                 if(idx !== -1 && dataMap[h.sub]) {
-                    // 這裡改為累加「時間」而非「次數」
-                    // 舊紀錄可能沒有 duration，預設給 25 分鐘
                     const dur = h.duration !== undefined ? h.duration : 25; 
                     dataMap[h.sub][idx] += dur;
                 }
@@ -597,13 +608,10 @@
                 const label = document.createElement('div'); label.className = 'hm-label-col'; label.innerText = subName; grid.appendChild(label);
                 dataMap[subName].forEach(minutes => {
                     const cell = document.createElement('div'); cell.className = 'hm-cell';
-                    
-                    // 時間門檻
-                    if(minutes > 0) cell.classList.add('lvl-1');    // 1-29 min
-                    if(minutes >= 30) cell.classList.remove('lvl-1'), cell.classList.add('lvl-2'); // 30-59 min
-                    if(minutes >= 60) cell.classList.remove('lvl-2'), cell.classList.add('lvl-3'); // 60-119 min
-                    if(minutes >= 120) cell.classList.remove('lvl-3'), cell.classList.add('lvl-4'); // 120+ min
-                    
+                    if(minutes > 0) cell.classList.add('lvl-1');
+                    if(minutes >= 30) cell.classList.remove('lvl-1'), cell.classList.add('lvl-2');
+                    if(minutes >= 60) cell.classList.remove('lvl-2'), cell.classList.add('lvl-3');
+                    if(minutes >= 120) cell.classList.remove('lvl-3'), cell.classList.add('lvl-4');
                     if(minutes > 0) cell.title = `${subName}: ${minutes}分鐘`;
                     grid.appendChild(cell);
                 });
@@ -626,6 +634,12 @@
         function resetDrawScreen() {
             document.getElementById('result-display').innerText = "?";
             document.getElementById('result-display').style.color = "#3498db";
+            
+            // 顯示抽籤按鈕，隱藏計時器
+            const drawBtnContainer = document.getElementById('draw-btn-container');
+            if(drawBtnContainer) drawBtnContainer.classList.remove('hidden');
+            
+            document.getElementById('timer-box').classList.add('hidden');
             resetTimer();
         }
         function saveSettings() {
